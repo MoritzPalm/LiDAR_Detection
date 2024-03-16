@@ -3,3 +3,6 @@ data/
 .ipynb_checkpoints/
 *.png
 *.xml
+
+.ruff_cache
+.run
