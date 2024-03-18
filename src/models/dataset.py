@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from src.utils import read_labels, get_relative_coords
 
 # TODO: include data augmentation and other transformations
+# TODO: add image reshape and normalization
 
 
 class LiDARDataset(Dataset):
