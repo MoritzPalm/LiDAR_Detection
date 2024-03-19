@@ -1,10 +1,9 @@
 import lightning as L
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 from torch import optim
 
 from src.models.cnn_v1 import Cnn
-from src.models.dataset import LiDARDataset
+from src.models.dataset import LiDARDataset, make_loaders, transform, target_transform
 
 
 class CnnLight(L.LightningModule):
@@ -40,8 +39,16 @@ if __name__ == "__main__":
     with open(f'{DATA_PATH}/train.txt', 'r') as f:
         train_files = f.read().split('\n')
         train_files.remove('')
-    dataset = LiDARDataset(IMAGE_PATH, LABEL_PATH, train_files)
-    train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    dataset = LiDARDataset(
+        "../../data/NAPLab-LiDAR/images",
+        "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
+        transform=transform,
+        target_transform=target_transform,
+    )
+    train_loader, validation_loader = make_loaders(dataset, batch_size=64, validation_split=.2)
+
     model = CnnLight(1e-3)
     trainer = L.Trainer(max_epochs=10)
     trainer.fit(model, train_loader)
+    trainer.test(model, validation_loader)

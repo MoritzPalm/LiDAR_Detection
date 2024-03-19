@@ -1,11 +1,4 @@
-import lightning as L
-import numpy as np
-from torch import optim, nn, utils, Tensor
-import torch.nn.functional as F
-import torch
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from torch import nn
 
 
 class Cnn(nn.Module):
