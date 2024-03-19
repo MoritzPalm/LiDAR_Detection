@@ -1,15 +1,16 @@
 import lightning as L
 import torch.nn.functional as F
 from torch import optim
+from torchvision.models import resnet50
 
 from src.models.cnn_v1 import Cnn
 from src.models.dataset import LiDARDataset, make_loaders, transform, target_transform
 
 
 class CnnLight(L.LightningModule):
-    def __init__(self, lr):
+    def __init__(self, baseModel, lr):
         super().__init__()
-        self.model = Cnn(10)
+        self.model = Cnn(baseModel, 8)
         self.lr = lr
 
     def training_step(self, batch, batch_idx):
@@ -44,11 +45,14 @@ if __name__ == "__main__":
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transform,
-        target_transform=target_transform,
     )
-    train_loader, validation_loader = make_loaders(dataset, batch_size=64, validation_split=.2)
+    train_loader, validation_loader = make_loaders(dataset, batch_size=1, validation_split=.2)
 
-    model = CnnLight(1e-3)
+    resnet = resnet50(pretrained=True)
+    for param in resnet.parameters():
+        param.requires_grad = False
+
+    model = CnnLight(resnet, 1e-3)
     trainer = L.Trainer(max_epochs=10)
     trainer.fit(model, train_loader)
     trainer.test(model, validation_loader)

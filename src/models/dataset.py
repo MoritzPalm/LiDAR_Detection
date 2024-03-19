@@ -9,12 +9,13 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from src.utils import read_labels, get_relative_coords
 
+
 # TODO: include data augmentation and other transformations
 # TODO: add image reshape and normalization
 
 
 class LiDARDataset(Dataset):
-    def __init__(self, img_dir, labels_dir, transform=None, target_transform=None):
+    def __init__(self, img_dir, labels_dir, transform=None):
         self.img_dir = img_dir
         self.labels_dir = labels_dir
         self.transform = transform
@@ -39,25 +40,23 @@ class LiDARDataset(Dataset):
             format=tv_tensors.BoundingBoxFormat.XYWH,
             canvas_size=(image.shape[0], image.shape[1]),
         )
-        target = {"classes": classes, "bboxes": bboxes}
         if self.transform:
             image = self.transform(image)
-        if self.target_transform:
-            target = self.target_transform(target)
-        return image, target
+        return image, classes, bboxes
 
 
 transform = transforms.Compose(
     [
-        #transforms.Resize((256, 256)),
-        #transforms.ToTensor(),
+        # transforms.Resize((256, 256)),
+        transforms.ToPILImage(),
+        transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ]
 )
 
 target_transform = transforms.Compose(
     [
-        #transforms.ToTensor(),
+        # transforms.ToTensor(),
     ]
 )
 
@@ -76,6 +75,7 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     validation_split = .2
 
     dataset_size = len(dataset)
+    print(len(dataset))
     indices = list(range(dataset_size))
 
     split = int(np.floor(validation_split * dataset_size))
@@ -86,7 +86,31 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     valid_sampler = SubsetRandomSampler(val_indices)
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                               sampler=train_sampler, shuffle=True)
+                                               sampler=train_sampler, num_workers=os.cpu_count())
     validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                                    sampler=valid_sampler, shuffle=False)
+                                                    sampler=valid_sampler, num_workers=os.cpu_count())
     return train_loader, validation_loader
+
+
+if __name__ == "__main__":
+    DATA_PATH = "../../data/NAPLab-LiDAR"
+    IMAGE_PATH = "../../data/NAPLab-LiDAR/images"
+    LABEL_PATH = "../../data/NAPLab-LiDAR/labels_yolo_v1.1"
+    with open(f'{DATA_PATH}/train.txt', 'r') as f:
+        train_files = f.read().split('\n')
+        train_files.remove('')
+
+    dataset = LiDARDataset(
+        "../../data/NAPLab-LiDAR/images",
+        "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
+        transform=transform,
+    )
+    train_loader, validation_loader = make_loaders(dataset, batch_size=64, validation_split=.2)
+    print(len(train_loader))
+    print(len(validation_loader))
+    img, classes, bboxes = next(iter(train_loader))
+    print(img.shape)
+    print(classes)
+    print(bboxes)
+
+
