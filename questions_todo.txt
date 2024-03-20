@@ -1,0 +1,10 @@
+1. was ist "rider" class?
+
+
+TODO:
+1. data augmentation (achtung auf bounding boxes) # Felix
+2. data exploration (plots für report, zB Verteilung der Labels) # Felix
+3. holdout validation -> cross validation
+4. model architecture research (zb assignment 4) # Moritz, Felix
+5. wandb integration # Moritz
+6.
