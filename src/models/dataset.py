@@ -9,9 +9,29 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from src.utils import read_labels, get_relative_coords
 
+# TODO: migrate from torchvision to albumentations for bounding box transformations
 
-# TODO: include data augmentation and other transformations
-# TODO: add image reshape and normalization
+
+def collate_fn(batch):
+    """
+    stacks the images, labels and the bounding boxes
+    :param batch: an iterable of N sets from __getitem__()
+    :return: a tensor of images, lists of varying-size tensors of bounding boxes and labels
+    Note: i am unsure if returning lists is the optimal way performance-wise
+    """
+
+    images = list()
+    bboxes = list()
+    classes = list()
+
+    for b in batch:
+        images.append(b[0])
+        classes.append(b[1])
+        bboxes.append(b[2])
+
+    images = torch.stack(images, dim=0)
+
+    return images, classes, bboxes
 
 
 class LiDARDataset(Dataset):
@@ -35,6 +55,7 @@ class LiDARDataset(Dataset):
         for label in labels:
             class_, x, y, w, h = get_relative_coords(label)
             rel_labels.append([x, y, w, h])
+            classes.append(class_)
         bboxes = tv_tensors.BoundingBoxes(
             rel_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
@@ -72,10 +93,8 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     """
     random_seed = 42
     np.random.seed(random_seed)
-    validation_split = .2
 
     dataset_size = len(dataset)
-    print(len(dataset))
     indices = list(range(dataset_size))
 
     split = int(np.floor(validation_split * dataset_size))
@@ -86,9 +105,9 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     valid_sampler = SubsetRandomSampler(val_indices)
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                               sampler=train_sampler, num_workers=os.cpu_count())
+                                               sampler=train_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
     validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                                    sampler=valid_sampler, num_workers=os.cpu_count())
+                                                    sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
     return train_loader, validation_loader
 
 
@@ -106,11 +125,4 @@ if __name__ == "__main__":
         transform=transform,
     )
     train_loader, validation_loader = make_loaders(dataset, batch_size=64, validation_split=.2)
-    print(len(train_loader))
-    print(len(validation_loader))
     img, classes, bboxes = next(iter(train_loader))
-    print(img.shape)
-    print(classes)
-    print(bboxes)
-
-
