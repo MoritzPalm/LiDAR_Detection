@@ -4,7 +4,7 @@ from torch import optim
 from torchvision.models import resnet50
 
 from src.models.cnn_v1 import Cnn
-from src.models.dataset import LiDARDataset, make_loaders, transform, target_transform
+from src.models.dataset import LiDARDataset, make_loaders, transforms
 
 
 class CnnLight(L.LightningModule):
@@ -14,17 +14,17 @@ class CnnLight(L.LightningModule):
         self.lr = lr
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
+        img, classes, bboxes = batch
         # TODO: reshape x
-        bboxes, classLogits = self.model(x)
-        loss = self.compute_loss(bboxes, classLogits, y)
+        classes_pred, bboxes_pred = self.model(img)
+        loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
         return loss
 
-    def compute_loss(self, bboxes, classLogits, y_true):
+    def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
         # compute the classification loss
-        classLoss = F.cross_entropy(classLogits, y_true["classes"])
+        classLoss = F.cross_entropy(classes_pred, classes)
         # compute the regression loss
-        regLoss = F.mse_loss(bboxes, y_true["bboxes"])
+        regLoss = F.mse_loss(bboxes_pred, bboxes)
         # return the total loss
         return classLoss + regLoss
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=transform,
+        transform=transforms,
     )
     train_loader, validation_loader = make_loaders(dataset, batch_size=1, validation_split=.2)
 

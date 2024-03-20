@@ -35,6 +35,6 @@ class Cnn(nn.Module):
         bboxes = self.regressor(features)
         classLogits = self.classifier(features)
         # return the outputs as a tuple
-        return bboxes, classLogits
+        return classLogits, bboxes
 
 
