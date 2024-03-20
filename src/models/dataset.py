@@ -3,13 +3,14 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import torch
-from torchvision import tv_tensors, transforms
+from torchvision import tv_tensors
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
+from torchvision.transforms import v2
 
 from src.utils import read_labels, get_relative_coords
 
-# TODO: migrate from torchvision to albumentations for bounding box transformations
+# TODO: check if migration from torchvision to albumentations for bounding box transformations is necessary
 
 
 def collate_fn(batch):
@@ -39,7 +40,6 @@ class LiDARDataset(Dataset):
         self.img_dir = img_dir
         self.labels_dir = labels_dir
         self.transform = transform
-        self.target_transform = target_transform
 
     def __len__(self):
         return len(os.listdir(self.img_dir))
@@ -62,24 +62,8 @@ class LiDARDataset(Dataset):
             canvas_size=(image.shape[0], image.shape[1]),
         )
         if self.transform:
-            image = self.transform(image)
+            image, bboxes = self.transform(image, bboxes)
         return image, classes, bboxes
-
-
-transform = transforms.Compose(
-    [
-        # transforms.Resize((256, 256)),
-        transforms.ToPILImage(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ]
-)
-
-target_transform = transforms.Compose(
-    [
-        # transforms.ToTensor(),
-    ]
-)
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
@@ -111,6 +95,14 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     return train_loader, validation_loader
 
 
+transforms = v2.Compose([
+    v2.ToImage(),
+    v2.ToDtype(torch.float32, scale=True),
+    v2.Resize((224, 224)),
+    v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+])
+
+
 if __name__ == "__main__":
     DATA_PATH = "../../data/NAPLab-LiDAR"
     IMAGE_PATH = "../../data/NAPLab-LiDAR/images"
@@ -122,7 +114,8 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=transform,
+        transform=transforms,
     )
-    train_loader, validation_loader = make_loaders(dataset, batch_size=64, validation_split=.2)
+    train_loader, validation_loader = make_loaders(dataset, batch_size=1, validation_split=.2)
     img, classes, bboxes = next(iter(train_loader))
+    print(f'img: {img.shape}, classes: {classes}, bboxes: {bboxes}')
