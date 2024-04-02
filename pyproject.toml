@@ -1,0 +1,8 @@
+[project]
+name = "LiDAR_Object_Detection"
+version = "0.1.0"
+description = "Object Detection on LiDAR data using a Single Shot Detector"
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
