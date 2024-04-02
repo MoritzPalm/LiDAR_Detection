@@ -1,4 +1,5 @@
 import lightning as L
+import torch
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import torch.nn.functional as F
@@ -15,7 +16,7 @@ from src.models.dataset import LiDARDataset, make_loaders, transforms
 config = munch.munchify(yaml.load(open("../../config.yaml"), Loader=yaml.FullLoader))
 
 
-class CnnLight(L.LightningModule):
+class SSD(L.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -33,11 +34,12 @@ class CnnLight(L.LightningModule):
 
     def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
         # compute the classification loss
-        classLoss = F.cross_entropy(classes_pred, classes)
+        #classLoss = F.cross_entropy(classes_pred, classes)
         # compute the regression loss
         regLoss = F.mse_loss(bboxes_pred, bboxes)
+        return regLoss
         # return the total loss
-        return classLoss + regLoss
+        #return classLoss + regLoss
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
@@ -53,10 +55,10 @@ if __name__ == "__main__":
     train_loader, validation_loader = make_loaders(dataset, batch_size=config.batch_size, validation_split=.2)
 
     if config.checkpoint_path:
-        model = CnnLight.load_from_checkpoint(checkpoint_path=config.checkpoint_path, config=config)
+        model = SSD.load_from_checkpoint(checkpoint_path=config.checkpoint_path, config=config)
         print("Loading weights from checkpoint...")
     else:
-        model = CnnLight(config)
+        model = SSD(config)
 
     trainer = L.Trainer(devices=config.devices,
                         max_epochs=config.max_epochs,
