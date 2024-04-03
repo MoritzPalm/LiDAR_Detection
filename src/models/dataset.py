@@ -11,20 +11,22 @@ from torchvision.transforms import v2
 
 from src.utils import get_relative_coords, read_labels
 
-# TODO: check if migration from torchvision to albumentations for bounding box transformations is necessary
+# TODO: check if migration from torchvision to
+#  albumentations for bounding box transformations is necessary
 
 
 def collate_fn(batch):
     """
     stacks the images, labels and the bounding boxes
     :param batch: an iterable of N sets from __getitem__()
-    :return: a tensor of images, lists of varying-size tensors of bounding boxes and labels
+    :return: a tensor of images,
+    lists of varying-size tensors of bounding boxes and labels
     Note: i am unsure if returning lists is the optimal way performance-wise
     """
 
-    images = list()
-    bboxes = list()
-    classes = list()
+    images = []
+    bboxes = []
+    classes = []
 
     for b in batch:
         images.append(b[0])
@@ -89,10 +91,12 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     train_sampler = SubsetRandomSampler(train_indices)
     valid_sampler = SubsetRandomSampler(val_indices)
 
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                               sampler=train_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
-    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                                    sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
+    train_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size, sampler=train_sampler,
+        num_workers=os.cpu_count(), collate_fn=collate_fn)
+    validation_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size,
+        sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
     return train_loader, validation_loader
 
 
@@ -117,6 +121,8 @@ if __name__ == "__main__":
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
     )
-    train_loader, validation_loader = make_loaders(dataset, batch_size=1, validation_split=.2)
+    train_loader, validation_loader = make_loaders(dataset,
+                                                   batch_size=1,
+                                                   validation_split=.2)
     img, classes, bboxes = next(iter(train_loader))
     print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")

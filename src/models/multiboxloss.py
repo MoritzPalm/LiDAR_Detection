@@ -1,10 +1,11 @@
-# this file is from https://github.com/TDT4265-tutorial/TDT4265_StarterCode_2024/blob/main/assignment4/SSD/ssd
-# /modeling/ssd_multibox_loss.py
+# this file is from
+# https://github.com/TDT4265-tutorial/TDT4265_StarterCode_2024/
+# blob/main/assignment4/SSD/ssd/modeling/ssd_multibox_loss.py
 import math
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as f
 
 
 def hard_negative_mining(loss, labels, neg_pos_ratio):
@@ -45,14 +46,16 @@ class SSDMultiboxLoss(nn.Module):
         self.scale_wh = 1.0 / anchors.scale_wh
 
         self.sl1_loss = nn.SmoothL1Loss(reduction="none")
-        self.anchors = nn.Parameter(anchors(order="xywh").transpose(0, 1).unsqueeze(dim=0),
+        self.anchors = nn.Parameter(anchors(order="xywh").
+                                    transpose(0, 1).unsqueeze(dim=0),
                                     requires_grad=False)
 
     def _loc_vec(self, loc):
         """
             Generate Location Vectors
         """
-        gxy = self.scale_xy * (loc[:, :2, :] - self.anchors[:, :2, :]) / self.anchors[:, 2:, ]
+        gxy = self.scale_xy * (loc[:, :2, :] -
+                               self.anchors[:, :2, :]) / self.anchors[:, 2:, ]
         gwh = self.scale_wh * (loc[:, 2:, :] / self.anchors[:, 2:, :]).log()
         return torch.cat((gxy, gwh), dim=1).contiguous()
 
@@ -66,18 +69,19 @@ class SSDMultiboxLoss(nn.Module):
             gt_bbox: [batch_size, num_anchors, 4]
             gt_label = [batch_size, num_anchors]
         """
-        gt_bbox = gt_bbox.transpose(1, 2).contiguous()  # reshape to [batch_size, 4, num_anchors]
+        # reshape to [batch_size, 4, num_anchors]
+        gt_bbox = gt_bbox.transpose(1, 2).contiguous()
         with torch.no_grad():
-            to_log = - F.log_softmax(confs, dim=1)[:, 0]
+            to_log = - f.log_softmax(confs, dim=1)[:, 0]
             mask = hard_negative_mining(to_log, gt_labels, 3.0)
-        classification_loss = F.cross_entropy(confs, gt_labels, reduction="none")
+        classification_loss = f.cross_entropy(confs, gt_labels, reduction="none")
         classification_loss = classification_loss[mask].sum()
 
         pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
         bbox_delta = bbox_delta[pos_mask]
         gt_locations = self._loc_vec(gt_bbox)
         gt_locations = gt_locations[pos_mask]
-        regression_loss = F.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
+        regression_loss = f.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0] / 4
         total_loss = regression_loss / num_pos + classification_loss / num_pos
         to_log = dict(

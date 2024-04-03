@@ -6,6 +6,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import PIL.Image as Image
 import seaborn as sns
+
 from src.utils import get_absolute_coords, read_labels
 
 # classes defined in data/NAPLabel-LiDAR/names.txt

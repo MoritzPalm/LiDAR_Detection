@@ -17,8 +17,10 @@ def read_labels(label_path: Path) -> list:
 def get_relative_coords(label: str) -> tuple:
     """
     Get the relative coordinates of the bounding box
-    :param label: string with elements 'class x y w h' where x, y are the center of the rectangle
-    :return: list with elements [class_, x, y, w, h] where x, y are the center of the rectangle
+    :param label: string with elements 'class x y w h'
+    where x, y are the center of the rectangle
+    :return: list with elements [class_, x, y, w, h]
+    where x, y are the center of the rectangle
     """
     label = label.split(" ")
     class_ = int(label[0])
@@ -32,10 +34,12 @@ def get_relative_coords(label: str) -> tuple:
 def get_absolute_coords(label: str, img_width: int, img_height: int) -> tuple:
     """
     Get the absolute coordinates of the bounding box
-    :param label: string with elements 'class x y w h' where x, y are the center of the rectangle
+    :param label: string with elements 'class x y w h'
+    where x, y are the center of the rectangle
     :param img_width: width of the image in pixels
     :param img_height: height of the image in pixels
-    :return: list with elements [class_, x, y, w, h] where x, y are the top left corner of the rectangle
+    :return: list with elements [class_, x, y, w, h]
+    where x, y are the top left corner of the rectangle
     """
 
     class_, x, y, w, h = get_relative_coords(label)

@@ -16,7 +16,8 @@ source = "https://github.com/MoritzPalm/LiDAR_Detection"
 
 [tool.ruff.lint]
 # 1. Enable flake8-bugbear (`B`) rules, in addition to the defaults.
-select = ["E", "W", "F", "B", "N", "I", "A", "ICN", "INP", "Q", "PD", "C", "R", "NPY", "RUF"]
+select = ["E", "W", "F", "B", "N", "I", "A",
+    "ICN", "INP", "Q", "PD", "C", "R", "NPY", "RUF"]
 
 [tool.ruff.format]
 # 5. Use single quotes for non-triple-quoted strings.
