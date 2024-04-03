@@ -1,8 +1,10 @@
 data/
 .idea/
 .ipynb_checkpoints/
+lightning_logs/
+wandb/
 *.png
 *.xml
-
+*egg-info/
 .ruff_cache
 .run
