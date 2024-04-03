@@ -1,14 +1,15 @@
 import os
 from pathlib import Path
-from PIL import Image
+
 import numpy as np
 import torch
-from torchvision import tv_tensors
+from PIL import Image
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
+from torchvision import tv_tensors
 from torchvision.transforms import v2
 
-from src.utils import read_labels, get_relative_coords
+from src.utils import get_relative_coords, read_labels
 
 # TODO: check if migration from torchvision to albumentations for bounding box transformations is necessary
 
@@ -107,9 +108,9 @@ if __name__ == "__main__":
     DATA_PATH = "../../data/NAPLab-LiDAR"
     IMAGE_PATH = "../../data/NAPLab-LiDAR/images"
     LABEL_PATH = "../../data/NAPLab-LiDAR/labels_yolo_v1.1"
-    with open(f'{DATA_PATH}/train.txt', 'r') as f:
-        train_files = f.read().split('\n')
-        train_files.remove('')
+    with open(f"{DATA_PATH}/train.txt", "r") as f:
+        train_files = f.read().split("\n")
+        train_files.remove("")
 
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
@@ -118,4 +119,4 @@ if __name__ == "__main__":
     )
     train_loader, validation_loader = make_loaders(dataset, batch_size=1, validation_split=.2)
     img, classes, bboxes = next(iter(train_loader))
-    print(f'img: {img.shape}, classes: {classes}, bboxes: {bboxes}')
+    print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")

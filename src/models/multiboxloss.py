@@ -1,8 +1,9 @@
 # this file is from https://github.com/TDT4265-tutorial/TDT4265_StarterCode_2024/blob/main/assignment4/SSD/ssd
 # /modeling/ssd_multibox_loss.py
-import torch.nn as nn
-import torch
 import math
+
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -43,7 +44,7 @@ class SSDMultiboxLoss(nn.Module):
         self.scale_xy = 1.0 / anchors.scale_xy
         self.scale_wh = 1.0 / anchors.scale_wh
 
-        self.sl1_loss = nn.SmoothL1Loss(reduction='none')
+        self.sl1_loss = nn.SmoothL1Loss(reduction="none")
         self.anchors = nn.Parameter(anchors(order="xywh").transpose(0, 1).unsqueeze(dim=0),
                                     requires_grad=False)
 

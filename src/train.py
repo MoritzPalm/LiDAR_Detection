@@ -1,13 +1,17 @@
 from pathlib import Path
+
 import munch
-import yaml
 import pytorch_lightning as L
+import yaml
+from pytorch_lightning.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 
-from models.dataset import LiDARDataset, make_loaders, transforms
 from models.cnn_v1_lightning import SSD
-
+from models.dataset import LiDARDataset, make_loaders, transforms
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
 
@@ -40,7 +44,7 @@ if __name__ == "__main__":
                             LearningRateMonitor(logging_interval="step"),
                             ModelCheckpoint(dirpath=Path(config.checkpoint_folder, config.wandb_project,
                                                          config.wandb_experiment_name),
-                                            filename='best_model:epoch={epoch:02d}-val_acc={val/acc:.4f}',
+                                            filename="best_model:epoch={epoch:02d}-val_acc={val/acc:.4f}",
                                             auto_insert_metric_name=False,
                                             save_weights_only=True,
                                             save_top_k=1),

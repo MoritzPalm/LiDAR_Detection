@@ -1,18 +1,10 @@
 import pytorch_lightning as L
-import torch
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 import torch.nn.functional as F
 from torch import optim
-from torchvision.models import resnet50, ResNet50_Weights
 from torchmetrics import Accuracy
-import munch
-import yaml
-from pathlib import Path
+from torchvision.models import ResNet50_Weights, resnet50
 
 from src.models.cnn_v1 import Cnn
-from src.models.dataset import LiDARDataset, make_loaders, transforms
-from src.models.multiboxloss import SSDMultiboxLoss
 
 
 class SSD(L.LightningModule):

@@ -1,13 +1,12 @@
 import os
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import seaborn as sns
-import PIL.Image as Image
 from enum import Enum
 from pathlib import Path
 
-from src.utils import read_labels, get_absolute_coords
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import PIL.Image as Image
+import seaborn as sns
+from src.utils import get_absolute_coords, read_labels
 
 # classes defined in data/NAPLabel-LiDAR/names.txt
 classes = Enum(

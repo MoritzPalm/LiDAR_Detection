@@ -1,0 +1,63 @@
+[project]
+name = "ssd_lidar"
+authors = [
+  { name="Moritz Palm", email="moritz.palm@web.de" },
+    { name="Felix Kuhn"}
+]
+version = "0.1.0"
+description = "Object Detection on LiDAR data using a Single Shot Detector"
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+source = "https://github.com/MoritzPalm/LiDAR_Detection"
+
+[tool.ruff.lint]
+# 1. Enable flake8-bugbear (`B`) rules, in addition to the defaults.
+select = ["E", "W", "F", "B", "N", "I", "A", "ICN", "INP", "Q", "PD", "C", "R", "NPY", "RUF"]
+
+[tool.ruff.format]
+# 5. Use single quotes for non-triple-quoted strings.
+quote-style = "single"
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# Assume Python 3.8
+target-version = "py38"
+
+extend-include = ["*.ipynb"]
