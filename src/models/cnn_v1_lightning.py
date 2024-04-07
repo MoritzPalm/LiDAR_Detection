@@ -4,7 +4,7 @@ from torch import optim
 from torchmetrics import Accuracy
 from torchvision.models import ResNet50_Weights, resnet50
 
-from src.models.cnn_v1 import Cnn
+from models.cnn_v1 import Cnn
 
 
 class SSD(l.LightningModule):
