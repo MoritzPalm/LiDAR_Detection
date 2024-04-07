@@ -79,13 +79,13 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     :return:
     """
     random_seed = 42
-    np.random.seed(random_seed)
+    rng = np.random.default_rng(random_seed)
 
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
 
     split = int(np.floor(validation_split * dataset_size))
-    np.random.shuffle(indices)
+    rng.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
 
     train_sampler = SubsetRandomSampler(train_indices)

@@ -27,8 +27,7 @@ class SSD(l.LightningModule):
         # compute the classification loss
         #classLoss = f.cross_entropy(classes_pred, classes)
         # compute the regression loss
-        reg_loss = f.mse_loss(bboxes_pred, bboxes)
-        return reg_loss
+        return f.mse_loss(bboxes_pred, bboxes)
         # return the total loss
         #return classLoss + regLoss
 

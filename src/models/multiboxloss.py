@@ -84,9 +84,9 @@ class SSDMultiboxLoss(nn.Module):
         regression_loss = f.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0] / 4
         total_loss = regression_loss / num_pos + classification_loss / num_pos
-        to_log = dict(
-            regression_loss=regression_loss / num_pos,
-            classification_loss=classification_loss / num_pos,
-            total_loss=total_loss
-        )
+        to_log = {
+            "regression_loss": regression_loss / num_pos,
+            "classification_loss": classification_loss / num_pos,
+            "total_loss": total_loss
+        }
         return total_loss, to_log
