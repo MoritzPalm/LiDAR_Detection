@@ -122,8 +122,10 @@ if __name__ == "__main__":
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
     )
+    print(f"dataset: {len(dataset)}")
     train_loader, validation_loader = make_loaders(dataset,
                                                    batch_size=1,
                                                    validation_split=.2)
+
     img, classes, bboxes = next(iter(train_loader))
     print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")

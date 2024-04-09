@@ -2,9 +2,9 @@
 
 
 TODO:
-1. data augmentation (achtung auf bounding boxes) # Felix
+1. data augmentation (achtung auf bounding boxes) # Felix, Moritz
 2. data exploration (plots für report, zB Verteilung der Labels) # Felix
 3. holdout validation -> cross validation ?
 6. test loader # Moritz
-7. wandb felix einladen # Moritz
 8. yolo architektur # Felix
+9. carbon emission package installieren

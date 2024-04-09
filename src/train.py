@@ -1,20 +1,19 @@
 from pathlib import Path
 
 import munch
-import pytorch_lightning as l
+import lightning.pytorch as pl
 import yaml
-from pytorch_lightning.callbacks import (
+from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
 )
-from pytorch_lightning.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger
 
 from models.dataset import LiDARDataset, make_loaders, transforms
-from models.ssd_lightning import SSD
+from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
-
 
 if __name__ == "__main__":
     dataset = LiDARDataset(
@@ -33,29 +32,29 @@ if __name__ == "__main__":
     else:
         model = SSD(config)
 
-    trainer = l.Trainer(devices=config.devices,
-                        max_epochs=config.max_epochs,
-                        check_val_every_n_epoch=config.check_val_every_n_epoch,
-                        enable_progress_bar=config.enable_progress_bar,
-                        precision="bf16-mixed",
-                        # deterministic=True,
-                        logger=WandbLogger(project=config.wandb_project,
-                                           name=config.wandb_experiment_name,
-                                           config=config),
-                        callbacks=[
-                            EarlyStopping(monitor="val/acc",
-                                          patience=config.early_stopping_patience,
-                                          mode="max",
-                                          verbose=True),
-                            LearningRateMonitor(logging_interval="step"),
-                            ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
-                                                         config.wandb_project,
-                                                         config.wandb_experiment_name),
-                                            filename="best_model:epoch={epoch:02d}-val_acc={val/acc:.4f}",
-                                            auto_insert_metric_name=False,
-                                            save_weights_only=True,
-                                            save_top_k=1),
-                        ])
+    trainer = pl.Trainer(devices=config.devices,
+                         max_epochs=config.max_epochs,
+                         check_val_every_n_epoch=config.check_val_every_n_epoch,
+                         enable_progress_bar=config.enable_progress_bar,
+                         precision="bf16-mixed",
+                         # deterministic=True,
+                         logger=WandbLogger(project=config.wandb_project,
+                                            name=config.wandb_experiment_name,
+                                            config=config),
+                         callbacks=[
+                             EarlyStopping(monitor="val/acc",
+                                           patience=config.early_stopping_patience,
+                                           mode="max",
+                                           verbose=True),
+                             LearningRateMonitor(logging_interval="step"),
+                             ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
+                                                          config.wandb_project,
+                                                          config.wandb_experiment_name),
+                                             filename="best_model:epoch={epoch:02d}-val_acc={val/acc:.4f}",
+                                             auto_insert_metric_name=False,
+                                             save_weights_only=True,
+                                             save_top_k=1),
+                         ])
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
