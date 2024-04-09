@@ -45,7 +45,7 @@ class LiDARDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(os.listdir(self.img_dir))
+        return len(os.listdir(self.img_dir)) - 1
 
     def __getitem__(self, idx: int):
         idx = str(idx).zfill(6)  # filling with zeros to match the 6 digit file name
@@ -123,7 +123,7 @@ if __name__ == "__main__":
         transform=transforms,
     )
     train_loader, validation_loader = make_loaders(dataset,
-                                                   batch_size=1,
+                                                   batch_size=9999,
                                                    validation_split=.2)
     img, classes, bboxes = next(iter(train_loader))
     print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")
