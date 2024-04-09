@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import munch
 import lightning.pytorch as pl
+import munch
 import yaml
 from lightning.pytorch.callbacks import (
     EarlyStopping,

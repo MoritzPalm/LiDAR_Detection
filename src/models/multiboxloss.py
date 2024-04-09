@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 
-from utils import cxcy_to_xy, find_jaccard_overlap, cxcy_to_gcxgcy, xy_to_cxcy
-
+from utils import cxcy_to_gcxgcy, cxcy_to_xy, find_jaccard_overlap, xy_to_cxcy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
