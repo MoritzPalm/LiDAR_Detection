@@ -87,6 +87,7 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     split = int(np.floor(validation_split * dataset_size))
     rng.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
+    # TODO: test loader
 
     train_sampler = SubsetRandomSampler(train_indices)
     valid_sampler = SubsetRandomSampler(val_indices)
@@ -103,7 +104,7 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float32, scale=True),
-    v2.Resize((224, 224)),
+    v2.Resize((300, 300)),
     v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
 

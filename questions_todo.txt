@@ -4,7 +4,7 @@
 TODO:
 1. data augmentation (achtung auf bounding boxes) # Felix
 2. data exploration (plots für report, zB Verteilung der Labels) # Felix
-3. holdout validation -> cross validation
-4. model architecture research (zb assignment 4) # Moritz, Felix
-5. wandb integration # Moritz
-6.
+3. holdout validation -> cross validation ?
+6. test loader # Moritz
+7. wandb felix einladen # Moritz
+8. yolo architektur # Felix

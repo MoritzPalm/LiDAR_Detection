@@ -10,8 +10,8 @@ from pytorch_lightning.callbacks import (
 )
 from pytorch_lightning.loggers import WandbLogger
 
-from models.cnn_v1_lightning import SSD
 from models.dataset import LiDARDataset, make_loaders, transforms
+from models.ssd_lightning import SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
 

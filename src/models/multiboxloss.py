@@ -83,6 +83,7 @@ class SSDMultiboxLoss(nn.Module):
         gt_locations = gt_locations[pos_mask]
         regression_loss = f.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
         num_pos = gt_locations.shape[0] / 4
+        # original paper also does not scale the classification loss
         total_loss = regression_loss / num_pos + classification_loss / num_pos
         to_log = {
             "regression_loss": regression_loss / num_pos,
