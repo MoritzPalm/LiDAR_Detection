@@ -17,7 +17,7 @@ class SSDLightning(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch
-        classes_pred, bboxes_pred = self.model(images)
+        bboxes_pred, classes_pred = self.model(images)
         return self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
 
     def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
