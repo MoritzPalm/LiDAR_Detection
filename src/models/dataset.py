@@ -59,6 +59,7 @@ class LiDARDataset(Dataset):
             class_, x, y, w, h = get_relative_coords(label)
             rel_labels.append([x, y, w, h])
             classes.append(class_)
+        classes = torch.LongTensor(classes)
         bboxes = tv_tensors.BoundingBoxes(
             rel_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
