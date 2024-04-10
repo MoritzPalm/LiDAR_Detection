@@ -3,6 +3,7 @@ from pathlib import Path
 import lightning.pytorch as pl
 import munch
 import yaml
+import torch
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
@@ -14,6 +15,8 @@ from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 if __name__ == "__main__":
     dataset = LiDARDataset(
@@ -31,8 +34,10 @@ if __name__ == "__main__":
         print("Loading weights from checkpoint...")
     else:
         model = SSD(config)
+    model.to(device)
 
-    trainer = pl.Trainer(devices=config.devices,
+    trainer = pl.Trainer(accelerator='gpu',
+                         devices=config.devices,
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
                          enable_progress_bar=config.enable_progress_bar,
