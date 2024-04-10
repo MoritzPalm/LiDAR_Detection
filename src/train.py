@@ -36,7 +36,7 @@ if __name__ == "__main__":
         model = SSD(config)
     model.to(device)
 
-    trainer = pl.Trainer(accelerator='gpu',
+    trainer = pl.Trainer(accelerator='auto',
                          devices=config.devices,
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,

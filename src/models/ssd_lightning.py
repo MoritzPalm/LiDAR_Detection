@@ -24,6 +24,13 @@ class SSDLightning(pl.LightningModule):
         bboxes_pred, classes_pred = self.model(images)
         return self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
 
+    def validation_step(self, batch, batch_idx):
+        images, classes, bboxes = batch
+        bboxes_pred, classes_pred = self.model(images)
+        loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
+        acc = self.acc_fn(classes_pred, classes)
+        return {"val_loss": loss, "val_acc": acc}
+
     def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
         loss = self.loss_fn(bboxes_pred, classes_pred, bboxes, classes)
         return loss
