@@ -13,7 +13,6 @@ class SSDLightning(pl.LightningModule):
         self.config = config
 
         self.model = SSD300(self.config.num_classes)
-        self.acc_fn = Accuracy(task="multiclass", num_classes=self.config.num_classes)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
 
     def training_step(self, batch, batch_idx):
@@ -25,8 +24,8 @@ class SSDLightning(pl.LightningModule):
         images, classes, bboxes = batch
         bboxes_pred, classes_pred = self.model(images)
         loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
-        acc = self.acc_fn(classes_pred, classes)
-        return {"val_loss": loss, "val_acc": acc}
+        # TODO: add val acc
+        return {"val_loss": loss}
 
     def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
         loss = self.loss_fn(bboxes_pred, classes_pred, bboxes, classes)
