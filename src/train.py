@@ -47,9 +47,9 @@ if __name__ == "__main__":
                                             name=config.wandb_experiment_name,
                                             config=config),
                          callbacks=[
-                             EarlyStopping(monitor="val/acc",
+                             EarlyStopping(monitor="val_loss",
                                            patience=config.early_stopping_patience,
-                                           mode="max",
+                                           mode="min",
                                            verbose=True),
                              LearningRateMonitor(logging_interval="step"),
                              ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
