@@ -10,6 +10,7 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.accelerators import find_usable_cuda_devices
 
 from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         model = SSD(config)
 
     trainer = pl.Trainer(accelerator='auto',
-                         devices=config.devices,
+                         devices=find_usable_cuda_devices(config.devices),
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
                          enable_progress_bar=config.enable_progress_bar,
