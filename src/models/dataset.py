@@ -14,6 +14,9 @@ from utils import get_relative_coords, read_labels
 # TODO: check if migration from torchvision to
 #  albumentations for bounding box transformations is necessary
 
+# this prevents erros with too many open files
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def collate_fn(batch):
     """
@@ -127,6 +130,12 @@ if __name__ == "__main__":
     train_loader, validation_loader = make_loaders(dataset,
                                                    batch_size=1,
                                                    validation_split=.2)
-
-    img, classes, bboxes = next(iter(train_loader))
-    print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")
+    imgs_list = []
+    classes_list = []
+    bboxes_list = []
+    for i, (img, classes, bboxes) in enumerate(train_loader):
+        imgs_list.extend(img)
+        classes_list.extend(classes)
+        bboxes_list.extend(bboxes)
+    print(f"img: {len(imgs_list)}, classes: {len(classes_list)}, "
+          f"bboxes: {len(bboxes_list)}")
