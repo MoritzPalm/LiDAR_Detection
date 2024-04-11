@@ -13,10 +13,11 @@ class MultiBoxLoss(nn.Module):
     (2) a confidence loss for the predicted class scores.
     """
 
-    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1.):
+    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device='cpu'):
         super(MultiBoxLoss, self).__init__()
-        self.priors_cxcy = priors_cxcy
-        self.priors_xy = cxcy_to_xy(priors_cxcy)
+        self.device = device
+        self.priors_cxcy = priors_cxcy.to(self.device)
+        self.priors_xy = cxcy_to_xy(priors_cxcy).to(self.device)
         self.threshold = threshold
         self.neg_pos_ratio = neg_pos_ratio
         self.alpha = alpha
@@ -38,6 +39,11 @@ class MultiBoxLoss(nn.Module):
         :param labels: true object labels, a list of N tensors
         :return: multibox loss, a scalar
         """
+        predicted_locs = predicted_locs.to(self.device)
+        predicted_scores = predicted_scores.to(self.device)
+        boxes = [b.to(self.device) for b in boxes]
+        labels = [l.to(self.device) for l in labels]
+
         batch_size = predicted_locs.size(0)
         n_priors = self.priors_cxcy.size(0)
         n_classes = predicted_scores.size(2)
