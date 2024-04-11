@@ -45,7 +45,7 @@ class LiDARDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(os.listdir(self.img_dir)) -1
+        return len([name for name in os.listdir(self.labels_dir) if os.path.isfile(name)]) - 1
 
     def __getitem__(self, idx: int):
         idx = str(idx).zfill(6)  # filling with zeros to match the 6 digit file name
