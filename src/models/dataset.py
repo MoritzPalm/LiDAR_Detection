@@ -14,8 +14,6 @@ from utils import get_relative_coords, read_labels
 # TODO: check if migration from torchvision to
 #  albumentations for bounding box transformations is necessary
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 def collate_fn(batch):
     """
@@ -124,7 +122,7 @@ if __name__ == "__main__":
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
-    ).to(device)
+    )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader = make_loaders(dataset,
                                                    batch_size=1,

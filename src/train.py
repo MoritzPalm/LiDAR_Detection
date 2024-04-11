@@ -15,7 +15,7 @@ from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_float32_matmul_precision('medium')
 
 
 if __name__ == "__main__":
@@ -34,7 +34,6 @@ if __name__ == "__main__":
         print("Loading weights from checkpoint...")
     else:
         model = SSD(config)
-    model.to(device)
 
     trainer = pl.Trainer(accelerator='auto',
                          devices=config.devices,

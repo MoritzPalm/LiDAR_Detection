@@ -7,17 +7,14 @@ from models.multiboxloss import MultiBoxLoss
 from models.ssd import SSD300
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 class SSDLightning(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
 
-        self.model = SSD300(self.config.num_classes).to(device)
+        self.model = SSD300(self.config.num_classes)
         self.acc_fn = Accuracy(task="multiclass", num_classes=self.config.num_classes)
-        self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy).to(device)
+        self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
 
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch

@@ -3,8 +3,6 @@ import torch.nn as nn
 
 from utils import cxcy_to_gcxgcy, cxcy_to_xy, find_jaccard_overlap, xy_to_cxcy
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class MultiBoxLoss(nn.Module):
     """
@@ -46,10 +44,10 @@ class MultiBoxLoss(nn.Module):
 
         assert n_priors == predicted_locs.size(1) == predicted_scores.size(1)
 
-        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float).to(
-            device)  # (N, 8732, 4)
-        true_classes = torch.zeros((batch_size, n_priors), dtype=torch.long).to(
-            device)  # (N, 8732)
+        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float)
+        # (N, 8732, 4)
+        true_classes = torch.zeros((batch_size, n_priors), dtype=torch.long)
+        # (N, 8732)
 
         # For each image
         for i in range(batch_size):
@@ -75,7 +73,7 @@ class MultiBoxLoss(nn.Module):
             # Then, assign each object to the corresponding
             # maximum-overlap-prior. (This fixes 1.)
             object_for_each_prior[prior_for_each_object] = torch.LongTensor(
-                range(n_objects)).to(device)
+                range(n_objects))
 
             # To ensure these priors qualify, artificially give them an
             # overlap of greater than 0.5. (This fixes 2.)
@@ -143,7 +141,7 @@ class MultiBoxLoss(nn.Module):
                                               descending=True)
         # (N, 8732), sorted by decreasing hardness
         hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(
-            conf_loss_neg).to(device)  # (N, 8732)
+            conf_loss_neg)  # (N, 8732)
         hard_negatives = hardness_ranks < n_hard_negatives.unsqueeze(1)  # (N, 8732)
         conf_loss_hard_neg = conf_loss_neg[hard_negatives]  # (sum(n_hard_negatives))
 
