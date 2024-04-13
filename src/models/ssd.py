@@ -420,8 +420,8 @@ class SSD300(nn.Module):
             torch.FloatTensor(1, 512, 1, 1))  # there are 512 channels in conv4_3_feats
         nn.init.constant_(self.rescale_factors, 20)
 
-        # Prior boxes
-        self.priors_cxcy = self.create_prior_boxes()
+        # Prior boxes, registered as buffer for correct device placement
+        self.register_buffer("priors_cxcy", self.create_prior_boxes())
 
     def forward(self, image):
         """

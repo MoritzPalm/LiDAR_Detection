@@ -18,7 +18,6 @@ class SSDLightning(pl.LightningModule):
                                                            iou_type='bbox',
                                                            class_metrics=True,
                                                            backend='faster_coco_eval')
-        #self.accuracy = Accuracy()
 
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch

@@ -41,8 +41,6 @@ if __name__ == "__main__":
     else:
         model = SSD(config)
 
-
-
     trainer = pl.Trainer(accelerator='auto',
                          devices=devices,
                          max_epochs=config.max_epochs,
@@ -70,4 +68,4 @@ if __name__ == "__main__":
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
-    #trainer.test(model=model, dataloaders=test_loader)
+    # trainer.test(model=model, dataloaders=test_loader)
