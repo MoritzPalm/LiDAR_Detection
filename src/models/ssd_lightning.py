@@ -12,7 +12,7 @@ class SSDLightning(pl.LightningModule):
         super().__init__()
         self.config = config
 
-        self.model = SSD300(self.config.num_classes)
+        self.model = SSD300(self.config.num_classes, device=self.device)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
         self.mean_average_precision = MeanAveragePrecision(box_format='cxcywh',
                                                            iou_type='bbox',
