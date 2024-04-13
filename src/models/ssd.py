@@ -598,7 +598,9 @@ class SSD300(nn.Module):
                 # A torch.uint8 (byte) tensor to keep track
                 # of which predicted boxes to suppress
                 # 1 implies suppress, 0 implies don't suppress
-                suppress = torch.zeros((n_above_min_score), dtype=torch.uint8)
+                suppress = torch.zeros((n_above_min_score),
+                                       dtype=torch.uint8,
+                                       device=self.device)
                 # (n_qualified)
 
                 # Consider each box in order of decreasing scores
