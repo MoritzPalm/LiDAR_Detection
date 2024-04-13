@@ -74,10 +74,12 @@ class LiDARDataset(Dataset):
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
-        -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+        -> tuple[torch.utils.data.DataLoader,
+        torch.utils.data.DataLoader,
+        torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
-    :param validation_split:
+    :param validation_split: percentage of the dataset to use for validation and testing
     :param dataset:
     :param batch_size:
     :return:
@@ -91,10 +93,13 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     split = int(np.floor(validation_split * dataset_size))
     rng.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
-    # TODO: test loader
+    split = int(np.floor(validation_split * len(train_indices)))
+    rng.shuffle(train_indices)
+    train_indices, test_indices = train_indices[split:], train_indices[:split]
 
     train_sampler = SubsetRandomSampler(train_indices)
     valid_sampler = SubsetRandomSampler(val_indices)
+    test_sampler = SubsetRandomSampler(test_indices)
 
     train_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, sampler=train_sampler,
@@ -102,7 +107,10 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     validation_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
         sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
-    return train_loader, validation_loader
+    test_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size,
+        sampler=test_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
+    return train_loader, validation_loader, test_loader
 
 
 transforms = v2.Compose([
@@ -111,7 +119,6 @@ transforms = v2.Compose([
     v2.Resize((300, 300)),
     v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
-
 
 if __name__ == "__main__":
     DATA_PATH = "../../data/NAPLab-LiDAR"
@@ -127,9 +134,9 @@ if __name__ == "__main__":
         transform=transforms,
     )
     print(f"dataset: {len(dataset)}")
-    train_loader, validation_loader = make_loaders(dataset,
-                                                   batch_size=1,
-                                                   validation_split=.2)
+    train_loader, validation_loader, test_loader = make_loaders(dataset,
+                                                                batch_size=1,
+                                                                validation_split=.2)
     imgs_list = []
     classes_list = []
     bboxes_list = []

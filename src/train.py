@@ -16,8 +16,11 @@ from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
+if torch.cuda.is_available():
+    devices = find_usable_cuda_devices(config.devices)
+else:
+    devices = 1
 torch.set_float32_matmul_precision('medium')
-
 
 if __name__ == "__main__":
     dataset = LiDARDataset(
@@ -25,9 +28,11 @@ if __name__ == "__main__":
         "../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
     )
-    train_loader, validation_loader = make_loaders(dataset,
-                                                   batch_size=config.batch_size,
-                                                   validation_split=.2)
+    (train_loader,
+     validation_loader,
+     test_loader) = make_loaders(dataset,
+                                 batch_size=config.batch_size,
+                                 validation_split=.2)
 
     if config.checkpoint_path:
         model = SSD.load_from_checkpoint(checkpoint_path=config.checkpoint_path,
@@ -36,8 +41,10 @@ if __name__ == "__main__":
     else:
         model = SSD(config)
 
+
+
     trainer = pl.Trainer(accelerator='auto',
-                         devices=find_usable_cuda_devices(config.devices),
+                         devices=devices,
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
                          enable_progress_bar=config.enable_progress_bar,
@@ -63,3 +70,4 @@ if __name__ == "__main__":
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
+    #trainer.test(model=model, dataloaders=test_loader)
