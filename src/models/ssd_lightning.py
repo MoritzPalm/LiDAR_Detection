@@ -31,7 +31,7 @@ class SSDLightning(pl.LightningModule):
         det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
             bboxes_pred, classes_pred,
             min_score=0.01, max_overlap=0.45,
-            top_k=200)
+            top_k=50)
         preds = []
         for det_boxes, det_labels, det_scores in (
                 zip(det_boxes_batch, det_labels_batch, det_scores_batch)):

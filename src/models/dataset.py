@@ -103,13 +103,13 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 
     train_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, sampler=train_sampler,
-        num_workers=os.cpu_count(), collate_fn=collate_fn)
+        num_workers=0, collate_fn=collate_fn)
     validation_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
-        sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
+        sampler=valid_sampler, num_workers=0, collate_fn=collate_fn)
     test_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
-        sampler=test_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
+        sampler=test_sampler, num_workers=0, collate_fn=collate_fn)
     return train_loader, validation_loader, test_loader
 
 
