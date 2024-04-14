@@ -621,18 +621,18 @@ class SSD300(nn.Module):
                 # Store only unsuppressed boxes for this class
                 image_boxes.append(class_decoded_locs[1 - suppress])
                 image_labels.append(
-                    torch.LongTensor((1 - suppress).sum().item() * [c],
-                                     device=self.priors_cxcy.device))
+                    torch.tensor((1 - suppress).sum().item() * [c], dtype=torch.long,
+                                 device=self.priors_cxcy.device))
                 image_scores.append(class_scores[1 - suppress])
 
             # If no object in any class is found, store a placeholder for 'background'
             if len(image_boxes) == 0:
-                image_boxes.append(torch.FloatTensor([[0., 0., 1., 1.]],
-                                                     device=self.priors_cxcy.device))
-                image_labels.append(torch.LongTensor([0],
-                                                     device=self.priors_cxcy.device))
-                image_scores.append(torch.FloatTensor([0.],
-                                                      device=self.priors_cxcy.device))
+                image_boxes.append(torch.tensor([[0., 0., 1., 1.]], dtype=torch.float,
+                                                device=self.priors_cxcy.device))
+                image_labels.append(torch.tensor([0], dtype=torch.long,
+                                                 device=self.priors_cxcy.device))
+                image_scores.append(torch.tensor([0.], dtype=torch.float,
+                                                 device=self.priors_cxcy.device))
 
             # Concatenate into single tensors
             image_boxes = torch.cat(image_boxes, dim=0)  # (n_objects, 4)
