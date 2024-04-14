@@ -21,4 +21,4 @@ wandb_experiment_name: SSD300_finetune
 
 train_split_ratio: 0.8
 data_root: ../../data
-checkpoint_folder: ../checkpoints/
+checkpoint_folder: ./checkpoints/
