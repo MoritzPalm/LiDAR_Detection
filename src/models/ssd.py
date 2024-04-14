@@ -6,12 +6,10 @@ import torchvision
 from torch import nn
 
 from utils import (
-    cxcy_to_gcxgcy,
     cxcy_to_xy,
     decimate,
     find_jaccard_overlap,
     gcxgcy_to_cxcy,
-    xy_to_cxcy,
 )
 
 
@@ -116,7 +114,7 @@ class VGGBase(nn.Module):
         param_names = list(state_dict.keys())
 
         # Pretrained VGG base
-        pretrained_state_dict = torchvision.models.vgg16(weights='DEFAULT').state_dict()
+        pretrained_state_dict = torchvision.models.vgg16(weights="DEFAULT").state_dict()
         pretrained_param_names = list(pretrained_state_dict.keys())
 
         # Transfer conv. parameters from pretrained model to current model

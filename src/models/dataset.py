@@ -15,7 +15,7 @@ from utils import get_relative_coords, read_labels
 #  albumentations for bounding box transformations is necessary
 
 # this prevents erros with too many open files
-torch.multiprocessing.set_sharing_strategy('file_system')
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 
 def collate_fn(batch):

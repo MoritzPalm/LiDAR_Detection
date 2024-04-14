@@ -1,8 +1,7 @@
 import lightning.pytorch as pl
-import torch
 from torch import optim
-from torchmetrics import Accuracy
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
+
 from models.multiboxloss import MultiBoxLoss
 from models.ssd import SSD300
 
@@ -14,10 +13,10 @@ class SSDLightning(pl.LightningModule):
 
         self.model = SSD300(self.config.num_classes, device=self.device)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
-        self.mean_average_precision = MeanAveragePrecision(box_format='cxcywh',
-                                                           iou_type='bbox',
+        self.mean_average_precision = MeanAveragePrecision(box_format="cxcywh",
+                                                           iou_type="bbox",
                                                            class_metrics=True,
-                                                           backend='faster_coco_eval')
+                                                           backend="faster_coco_eval")
 
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch
@@ -36,13 +35,13 @@ class SSDLightning(pl.LightningModule):
         preds = []
         for det_boxes, det_labels, det_scores in (
                 zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
-            preds.append({'boxes': det_boxes,
-                          'scores': det_scores,
-                          'labels': det_labels})
-        targets = [{'boxes': bboxes, 'labels': classes}
+            preds.append({"boxes": det_boxes,
+                          "scores": det_scores,
+                          "labels": det_labels})
+        targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
         self.mean_average_precision.update(preds=preds, target=targets)
-        self.log("val_mAP", self.mean_average_precision.compute()['map'], prog_bar=True)
+        self.log("val_mAP", self.mean_average_precision.compute()["map"], prog_bar=True)
         return loss
 
     def test_step(self):

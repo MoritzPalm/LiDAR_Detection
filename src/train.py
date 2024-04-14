@@ -2,15 +2,15 @@ from pathlib import Path
 
 import lightning.pytorch as pl
 import munch
-import yaml
 import torch
+import yaml
+from lightning.pytorch.accelerators import find_usable_cuda_devices
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.accelerators import find_usable_cuda_devices
 
 from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
@@ -20,7 +20,7 @@ if torch.cuda.is_available():
     devices = find_usable_cuda_devices(config.devices)
 else:
     devices = 1
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision("medium")
 
 if __name__ == "__main__":
     dataset = LiDARDataset(
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     else:
         model = SSD(config)
 
-    trainer = pl.Trainer(accelerator='auto',
+    trainer = pl.Trainer(accelerator="auto",
                          devices=devices,
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,

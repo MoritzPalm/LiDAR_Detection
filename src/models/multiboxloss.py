@@ -13,7 +13,7 @@ class MultiBoxLoss(nn.Module):
     (2) a confidence loss for the predicted class scores.
     """
 
-    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device='cpu'):
+    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device="cpu"):
         super(MultiBoxLoss, self).__init__()
         self.device = device
         self.priors_cxcy = priors_cxcy.to(self.device)
@@ -24,7 +24,7 @@ class MultiBoxLoss(nn.Module):
 
         self.smooth_l1 = nn.L1Loss()  # *smooth* L1 loss in the paper;
         # see Remarks section in the tutorial
-        self.cross_entropy = nn.CrossEntropyLoss(reduction='none')
+        self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
 
     def forward(self, predicted_locs, predicted_scores, boxes, labels):
         """

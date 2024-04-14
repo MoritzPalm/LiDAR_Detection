@@ -4,7 +4,6 @@ from pathlib import Path
 
 import torch
 
-
 labels = Enum(
     "classes",
     ["car", "truck", "bus", "motorcycle", "bicycle", "scooter", "person", "rider"],
@@ -133,8 +132,8 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
     true_images = []
     for i in range(len(true_labels)):
         true_images.extend([i] * true_labels[i].size(0))
-    true_images = torch.LongTensor(true_images).to(
-        device)  # (n_objects), n_objects is the total no. of objects across all images
+    true_images = torch.LongTensor(true_images)
+    # (n_objects), n_objects is the total no. of objects across all images
     true_boxes = torch.cat(true_boxes, dim=0)  # (n_objects, 4)
     true_labels = torch.cat(true_labels, dim=0)  # (n_objects)
     true_difficulties = torch.cat(true_difficulties, dim=0)  # (n_objects)
@@ -146,7 +145,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
     det_images = []
     for i in range(len(det_labels)):
         det_images.extend([i] * det_labels[i].size(0))
-    det_images = torch.LongTensor(det_images).to(device)  # (n_detections)
+    det_images = torch.LongTensor(det_images)  # (n_detections)
     det_boxes = torch.cat(det_boxes, dim=0)  # (n_detections, 4)
     det_labels = torch.cat(det_labels, dim=0)  # (n_detections)
     det_scores = torch.cat(det_scores, dim=0)  # (n_detections)
@@ -170,8 +169,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
         # Keep track of which true objects with this class have already been 'detected'
         # So far, none
         true_class_boxes_detected = torch.zeros((true_class_difficulties.size(0)),
-                                                dtype=torch.uint8).to(
-            device)  # (n_class_objects)
+                                                dtype=torch.uint8)  # (n_class_objects)
 
         # Extract only detections with this class
         det_class_images = det_images[det_labels == c]  # (n_class_detections)
@@ -188,10 +186,10 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
         det_class_boxes = det_class_boxes[sort_ind]  # (n_class_detections, 4)
 
         # In the order of decreasing scores, check if true or false positive
-        true_positives = torch.zeros((n_class_detections), dtype=torch.float).to(
-            device)  # (n_class_detections)
-        false_positives = torch.zeros((n_class_detections), dtype=torch.float).to(
-            device)  # (n_class_detections)
+        true_positives = torch.zeros((n_class_detections), dtype=torch.float)
+          # (n_class_detections)
+        false_positives = torch.zeros((n_class_detections), dtype=torch.float)
+        # (n_class_detections)
         for d in range(n_class_detections):
             this_detection_box = det_class_boxes[d].unsqueeze(0)  # (1, 4)
             this_image = det_class_images[d]  # (), scalar
@@ -255,8 +253,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
         # Find the mean of the maximum of the precisions
         # corresponding to recalls above the threshold 't'
         recall_thresholds = torch.arange(start=0, end=1.1, step=.1).tolist()  # (11)
-        precisions = torch.zeros((len(recall_thresholds)), dtype=torch.float).to(
-            device)  # (11)
+        precisions = torch.zeros((len(recall_thresholds)), dtype=torch.float)  # (11)
         for i, t in enumerate(recall_thresholds):
             recalls_above_t = cumul_recall >= t
             if recalls_above_t.any():
