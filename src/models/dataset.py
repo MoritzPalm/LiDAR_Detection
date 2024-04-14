@@ -50,7 +50,8 @@ class LiDARDataset(Dataset):
     def __len__(self):
         return len(os.listdir(self.labels_dir)) - 1
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> (
+            tuple)[torch.Tensor, torch.Tensor, tv_tensors.BoundingBoxes]:
         idx = str(idx).zfill(6)  # filling with zeros to match the 6 digit file name
         img_path = os.path.join(self.img_dir, f"frame_{idx}.PNG")
         label_path = os.path.join(self.labels_dir, f"frame_{idx}.txt")

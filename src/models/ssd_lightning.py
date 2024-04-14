@@ -28,20 +28,20 @@ class SSDLightning(pl.LightningModule):
         bboxes_pred, classes_pred = self.model(images)
         loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
-            bboxes_pred, classes_pred,
-            min_score=0.01, max_overlap=0.45,
-            top_k=50)
-        preds = []
-        for det_boxes, det_labels, det_scores in (
-                zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
-            preds.append({"boxes": det_boxes,
-                          "scores": det_scores,
-                          "labels": det_labels})
-        targets = [{"boxes": bboxes, "labels": classes}
-                   for bboxes, classes in zip(bboxes, classes)]
-        self.mean_average_precision.update(preds=preds, target=targets)
-        self.log("val_mAP", self.mean_average_precision.compute()["map"], prog_bar=True)
+        #det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
+        #    bboxes_pred, classes_pred,
+        #    min_score=0.01, max_overlap=0.45,
+        #    top_k=50)
+        #preds = []
+        #for det_boxes, det_labels, det_scores in (
+        #        zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
+        #    preds.append({"boxes": det_boxes,
+        #                  "scores": det_scores,
+        #                  "labels": det_labels})
+        #targets = [{"boxes": bboxes, "labels": classes}
+        #           for bboxes, classes in zip(bboxes, classes)]
+        #self.mean_average_precision.update(preds=preds, target=targets)
+        #self.log("val_mAP", self.mean_average_precision.compute()["map"], prog_bar=True)
         return loss
 
     def test_step(self):
