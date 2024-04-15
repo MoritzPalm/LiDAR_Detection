@@ -76,8 +76,8 @@ class LiDARDataset(Dataset):
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
         -> tuple[torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader]:
+                 torch.utils.data.DataLoader,
+                 torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
     :param validation_split: percentage of the dataset to use for validation and testing
