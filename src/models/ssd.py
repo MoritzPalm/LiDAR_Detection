@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torchvision
 from torch import nn
 
-from utils import (
+from src.utils import (
     cxcy_to_xy,
     decimate,
     find_jaccard_overlap,

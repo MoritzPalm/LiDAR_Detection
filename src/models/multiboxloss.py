@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from utils import cxcy_to_gcxgcy, cxcy_to_xy, find_jaccard_overlap, xy_to_cxcy
+from src.utils import cxcy_to_gcxgcy, cxcy_to_xy, find_jaccard_overlap, xy_to_cxcy
 
 
 class MultiBoxLoss(nn.Module):

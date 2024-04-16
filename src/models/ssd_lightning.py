@@ -2,8 +2,8 @@ import lightning.pytorch as pl
 from torch import optim
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-from models.multiboxloss import MultiBoxLoss
-from models.ssd import SSD300
+from src.models.multiboxloss import MultiBoxLoss
+from src.models.ssd import SSD300
 
 
 class SSDLightning(pl.LightningModule):
@@ -21,7 +21,9 @@ class SSDLightning(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch
         bboxes_pred, classes_pred = self.model(images)
-        return self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
+        loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
+        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        return loss
 
     def validation_step(self, batch, batch_idx):
         images, classes, bboxes = batch

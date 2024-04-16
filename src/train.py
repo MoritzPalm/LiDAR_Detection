@@ -12,8 +12,8 @@ from lightning.pytorch.callbacks import (
 )
 from lightning.pytorch.loggers import WandbLogger
 
-from models.dataset import LiDARDataset, make_loaders, transforms
-from models.ssd_lightning import SSDLightning as SSD
+from src.models.dataset import LiDARDataset, make_loaders, transforms
+from src.models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
 if torch.cuda.is_available():
