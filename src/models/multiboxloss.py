@@ -1,93 +1,161 @@
-# this file is from
-# https://github.com/TDT4265-tutorial/TDT4265_StarterCode_2024/
-# blob/main/assignment4/SSD/ssd/modeling/ssd_multibox_loss.py
-import math
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as f
+
+from utils import cxcy_to_gcxgcy, cxcy_to_xy, find_jaccard_overlap, xy_to_cxcy
 
 
-def hard_negative_mining(loss, labels, neg_pos_ratio):
+class MultiBoxLoss(nn.Module):
     """
-    It used to suppress the presence of a large number of negative prediction.
-    It works on image level not batch level.
-    For any example/image, it keeps all the positive predictions and
-     cut the number of negative predictions to make sure the ratio
-     between the negative examples and positive examples is no more
-     the given ratio for an image.
-    Args:
-        loss (N, num_priors): the loss for each example.
-        labels (N, num_priors): the labels.
-        neg_pos_ratio:  the ratio between the negative examples and positive examples.
-    """
-    pos_mask = labels > 0
-    num_pos = pos_mask.long().sum(dim=1, keepdim=True)
-    num_neg = num_pos * neg_pos_ratio
+    The MultiBox loss, a loss function for object detection.
 
-    loss[pos_mask] = -math.inf
-    _, indexes = loss.sort(dim=1, descending=True)
-    _, orders = indexes.sort(dim=1)
-    neg_mask = orders < num_neg
-    return pos_mask | neg_mask
-
-
-class SSDMultiboxLoss(nn.Module):
-    """
-        Implements the loss as the sum of the followings:
-        1. Confidence Loss: All labels, with hard negative mining
-        2. Localization Loss: Only on positive labels
-        Suppose input dboxes has the shape 8732x4
+    This is a combination of:
+    (1) a localization loss for the predicted locations of the boxes, and
+    (2) a confidence loss for the predicted class scores.
     """
 
-    def __init__(self, anchors):
-        super().__init__()
-        self.scale_xy = 1.0 / anchors.scale_xy
-        self.scale_wh = 1.0 / anchors.scale_wh
+    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device="cpu"):
+        super(MultiBoxLoss, self).__init__()
+        self.device = device
+        self.priors_cxcy = priors_cxcy.to(self.device)
+        self.priors_xy = cxcy_to_xy(priors_cxcy).to(self.device)
+        self.threshold = threshold
+        self.neg_pos_ratio = neg_pos_ratio
+        self.alpha = alpha
 
-        self.sl1_loss = nn.SmoothL1Loss(reduction="none")
-        self.anchors = nn.Parameter(anchors(order="xywh").
-                                    transpose(0, 1).unsqueeze(dim=0),
-                                    requires_grad=False)
+        self.smooth_l1 = nn.L1Loss()  # *smooth* L1 loss in the paper;
+        # see Remarks section in the tutorial
+        self.cross_entropy = nn.CrossEntropyLoss(reduction="none")
 
-    def _loc_vec(self, loc):
+    def forward(self, predicted_locs, predicted_scores, boxes, labels):
         """
-            Generate Location Vectors
-        """
-        gxy = self.scale_xy * (loc[:, :2, :] -
-                               self.anchors[:, :2, :]) / self.anchors[:, 2:, ]
-        gwh = self.scale_wh * (loc[:, 2:, :] / self.anchors[:, 2:, :]).log()
-        return torch.cat((gxy, gwh), dim=1).contiguous()
+        Forward propagation.
 
-    def forward(self,
-                bbox_delta: torch.FloatTensor, confs: torch.FloatTensor,
-                gt_bbox: torch.FloatTensor, gt_labels: torch.LongTensor):
+        :param predicted_locs: predicted locations/boxes w.r.t the 8732 prior boxes,
+        a tensor of dimensions (N, 8732, 4)
+        :param predicted_scores: class scores for each of the encoded locations/boxes,
+        a tensor of dimensions (N, 8732, n_classes)
+        :param boxes: true  object bounding boxes in boundary coordinates,
+        a list of N tensors
+        :param labels: true object labels, a list of N tensors
+        :return: multibox loss, a scalar
         """
-        NA is the number of anchor boxes (by default this is 8732)
-            bbox_delta: [batch_size, 4, num_anchors]
-            confs: [batch_size, num_classes, num_anchors]
-            gt_bbox: [batch_size, num_anchors, 4]
-            gt_label = [batch_size, num_anchors]
-        """
-        # reshape to [batch_size, 4, num_anchors]
-        gt_bbox = gt_bbox.transpose(1, 2).contiguous()
-        with torch.no_grad():
-            to_log = - f.log_softmax(confs, dim=1)[:, 0]
-            mask = hard_negative_mining(to_log, gt_labels, 3.0)
-        classification_loss = f.cross_entropy(confs, gt_labels, reduction="none")
-        classification_loss = classification_loss[mask].sum()
+        predicted_locs = predicted_locs.to(self.device)
+        predicted_scores = predicted_scores.to(self.device)
+        boxes = [cxcy_to_xy(b).to(self.device) for b in boxes]
+        labels = [l.to(self.device) for l in labels]
 
-        pos_mask = (gt_labels > 0).unsqueeze(1).repeat(1, 4, 1)
-        bbox_delta = bbox_delta[pos_mask]
-        gt_locations = self._loc_vec(gt_bbox)
-        gt_locations = gt_locations[pos_mask]
-        regression_loss = f.smooth_l1_loss(bbox_delta, gt_locations, reduction="sum")
-        num_pos = gt_locations.shape[0] / 4
-        # original paper also does not scale the classification loss
-        total_loss = regression_loss / num_pos + classification_loss / num_pos
-        to_log = {
-            "regression_loss": regression_loss / num_pos,
-            "classification_loss": classification_loss / num_pos,
-            "total_loss": total_loss
-        }
-        return total_loss, to_log
+        batch_size = predicted_locs.size(0)
+        n_priors = self.priors_cxcy.size(0)
+        n_classes = predicted_scores.size(2)
+
+        assert n_priors == predicted_locs.size(1) == predicted_scores.size(1)
+
+        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float)
+        # (N, 8732, 4)
+        true_classes = torch.zeros((batch_size, n_priors), dtype=torch.long)
+        # (N, 8732)
+
+        # For each image
+        for i in range(batch_size):
+            n_objects = boxes[i].size(0)
+
+            overlap = find_jaccard_overlap(boxes[i],
+                                           self.priors_xy)  # (n_objects, 8732)
+
+            # For each prior, find the object that has the maximum overlap
+            overlap_for_each_prior, object_for_each_prior = overlap.max(dim=0)  # (8732)
+
+            # We don't want a situation where an object is not represented
+            # in our positive (non-background) priors -
+            # 1. An object might not be the best object for all priors,
+            # and is therefore not in object_for_each_prior.
+            # 2. All priors with the object may be assigned
+            # as background based on the threshold (0.5).
+
+            # To remedy this -
+            # First, find the prior that has the maximum overlap for each object.
+            _, prior_for_each_object = overlap.max(dim=1)  # (N_o)
+
+            # Then, assign each object to the corresponding
+            # maximum-overlap-prior. (This fixes 1.)
+            object_for_each_prior[prior_for_each_object] = torch.LongTensor(
+                range(n_objects))
+
+            # To ensure these priors qualify, artificially give them an
+            # overlap of greater than 0.5. (This fixes 2.)
+            overlap_for_each_prior[prior_for_each_object] = 1.
+
+            # Labels for each prior
+            label_for_each_prior = labels[i][object_for_each_prior]  # (8732)
+            # Set priors whose overlaps with objects are less
+            # than the threshold to be background (no object)
+            label_for_each_prior[overlap_for_each_prior < self.threshold] = 0  # (8732)
+
+            # Store
+            true_classes[i] = label_for_each_prior
+
+            # Encode center-size object coordinates
+            # into the form we regressed predicted boxes to
+            true_locs[i] = cxcy_to_gcxgcy(xy_to_cxcy(boxes[i][object_for_each_prior]),
+                                          self.priors_cxcy)  # (8732, 4)
+
+        # Identify priors that are positive (object/non-background)
+        positive_priors = true_classes != 0  # (N, 8732)
+
+        # LOCALIZATION LOSS
+
+        # Localization loss is computed only over positive (non-background) priors
+        loc_loss = self.smooth_l1(predicted_locs[positive_priors],
+                                  true_locs[positive_priors])  # (), scalar
+
+        # Note: indexing with a torch.uint8 (byte) tensor flattens the tensor
+        # when indexing is across multiple dimensions (N & 8732)
+        # So, if predicted_locs has the shape (N, 8732, 4),
+        # predicted_locs[positive_priors] will have (total positives, 4)
+
+        # CONFIDENCE LOSS
+
+        # Confidence loss is computed over positive priors
+        # and the most difficult (hardest) negative priors in each image
+        # That is, FOR EACH IMAGE,
+        # we will take the hardest (neg_pos_ratio * n_positives)
+        # negative priors, i.e where there is maximum loss
+        # This is called Hard Negative Mining -
+        # it concentrates on hardest negatives in each image,
+        # and also minimizes pos/neg imbalance
+
+        # Number of positive and hard-negative priors per image
+        n_positives = positive_priors.sum(dim=1)  # (N)
+        n_hard_negatives = self.neg_pos_ratio * n_positives  # (N)
+
+        # First, find the loss for all priors
+        conf_loss_all = self.cross_entropy(predicted_scores.view(-1, n_classes),
+                                           true_classes.view(-1))  # (N * 8732)
+        conf_loss_all = conf_loss_all.view(batch_size, n_priors)  # (N, 8732)
+
+        # We already know which priors are positive
+        conf_loss_pos = conf_loss_all[positive_priors]  # (sum(n_positives))
+
+        # Next, find which priors are hard-negative
+        # To do this, sort ONLY negative priors in each image in order of
+        # decreasing loss and take top n_hard_negatives
+        conf_loss_neg = conf_loss_all.clone()  # (N, 8732)
+        conf_loss_neg[
+            positive_priors] = 0.  # (N, 8732), positive priors are ignored
+        # (never in top n_hard_negatives)
+        conf_loss_neg, _ = conf_loss_neg.sort(dim=1,
+                                              descending=True)
+        # (N, 8732), sorted by decreasing hardness
+        hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(
+            conf_loss_neg)  # (N, 8732)
+        hard_negatives = hardness_ranks < n_hard_negatives.unsqueeze(1)  # (N, 8732)
+        conf_loss_hard_neg = conf_loss_neg[hard_negatives]  # (sum(n_hard_negatives))
+
+        # As in the paper, averaged over positive priors only,
+        # although computed over both positive and hard-negative priors
+        conf_loss = ((conf_loss_hard_neg.sum() + conf_loss_pos.sum())
+                     / n_positives.sum().float())  # (), scalar
+
+        # TOTAL LOSS
+
+        return conf_loss + self.alpha * loc_loss
