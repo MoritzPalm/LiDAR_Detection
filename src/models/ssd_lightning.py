@@ -3,8 +3,8 @@ from torch import optim
 from torch.optim.lr_scheduler import MultiStepLR, ReduceLROnPlateau
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-from src.models.multiboxloss import MultiBoxLoss
-from src.models.ssd import SSD300
+from models.multiboxloss import MultiBoxLoss
+from models.ssd import SSD300
 
 
 class SSDLightning(pl.LightningModule):
