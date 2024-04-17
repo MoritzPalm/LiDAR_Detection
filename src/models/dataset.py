@@ -104,13 +104,13 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 
     train_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, sampler=train_sampler,
-        num_workers=0, collate_fn=collate_fn)
+        num_workers=0, collate_fn=collate_fn, drop_last=True)
     validation_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
-        sampler=valid_sampler, num_workers=0, collate_fn=collate_fn)
+        sampler=valid_sampler, num_workers=0, collate_fn=collate_fn, drop_last=True)
     test_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
-        sampler=test_sampler, num_workers=0, collate_fn=collate_fn)
+        sampler=test_sampler, num_workers=0, collate_fn=collate_fn, drop_last=True)
     return train_loader, validation_loader, test_loader
 
 
@@ -136,12 +136,12 @@ if __name__ == "__main__":
     )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader, test_loader = make_loaders(dataset,
-                                                                batch_size=1,
+                                                                batch_size=10,
                                                                 validation_split=.2)
     imgs_list = []
     classes_list = []
     bboxes_list = []
-    for i, (img, classes, bboxes) in enumerate(train_loader):
+    for i, (img, classes, bboxes) in enumerate(validation_loader):
         imgs_list.extend(img)
         classes_list.extend(classes)
         bboxes_list.extend(bboxes)
