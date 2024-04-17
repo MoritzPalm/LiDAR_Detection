@@ -1,5 +1,6 @@
 import lightning.pytorch as pl
 from torch import optim
+from torch.optim.lr_scheduler import MultiStepLR
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from src.models.multiboxloss import MultiBoxLoss
@@ -30,20 +31,21 @@ class SSDLightning(pl.LightningModule):
         bboxes_pred, classes_pred = self.model(images)
         loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        #det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
-        #    bboxes_pred, classes_pred,
-        #    min_score=0.01, max_overlap=0.45,
-        #    top_k=50)
-        #preds = []
-        #for det_boxes, det_labels, det_scores in (
-        #        zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
-        #    preds.append({"boxes": det_boxes,
-        #                  "scores": det_scores,
-        #                  "labels": det_labels})
-        #targets = [{"boxes": bboxes, "labels": classes}
-        #           for bboxes, classes in zip(bboxes, classes)]
-        #self.mean_average_precision.update(preds=preds, target=targets)
-        #self.log("val_mAP", self.mean_average_precision.compute()["map"], prog_bar=True)
+        det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
+            bboxes_pred, classes_pred,
+            min_score=0.01, max_overlap=0.45,
+            top_k=50)
+        preds = []
+        for det_boxes, det_labels, det_scores in (
+                zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
+            preds.append({"boxes": det_boxes,
+                          "scores": det_scores,
+                          "labels": det_labels})
+        targets = [{"boxes": bboxes, "labels": classes}
+                   for bboxes, classes in zip(bboxes, classes)]
+        self.mean_average_precision.update(preds=preds, target=targets)
+        self.log("val_mAP", self.mean_average_precision.compute()["map"],
+                 prog_bar=True, on_epoch=True, on_step=False)
         return loss
 
     def test_step(self):
@@ -54,4 +56,7 @@ class SSDLightning(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return optim.Adam(self.parameters(), lr=self.config.max_lr)
+        optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
+        scheduler = MultiStepLR(optimizer, milestones=[10, 20],
+                                gamma=0.1)  # Adjust milestones and gamma as needed
+        return [optimizer], [scheduler]
