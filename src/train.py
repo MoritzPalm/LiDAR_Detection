@@ -11,6 +11,7 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
+from codecarbon import track_emissions
 
 from src.models.dataset import LiDARDataset, make_loaders, transforms
 from src.models.ssd_lightning import SSDLightning as SSD
@@ -22,7 +23,9 @@ else:
     devices = 1
 torch.set_float32_matmul_precision("medium")
 
-if __name__ == "__main__":
+
+@track_emissions(country_iso_code="NOR")
+def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
         "../data/NAPLab-LiDAR/labels_yolo_v1.1",
@@ -68,3 +71,7 @@ if __name__ == "__main__":
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
     # trainer.test(model=model, dataloaders=test_loader)
+
+
+if __name__ == "__main__":
+    train()
