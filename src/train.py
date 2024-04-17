@@ -21,7 +21,9 @@ if torch.cuda.is_available():
     devices = find_usable_cuda_devices(config.devices)
 else:
     devices = 1
-torch.set_float32_matmul_precision("medium
+torch.set_float32_matmul_precision("medium")
+
+
 @track_emissions(country_iso_code="NOR", save_to_api=True)
 def train():
     dataset = LiDARDataset(

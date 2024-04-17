@@ -58,4 +58,4 @@ class SSDLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
         scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=5, verbose=True)
-        return [optimizer], [scheduler]
+        return {'optimizer': optimizer, 'scheduler': scheduler, 'monitor': "val_loss"}
