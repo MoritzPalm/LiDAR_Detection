@@ -9,7 +9,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import tv_tensors
 from torchvision.transforms import v2
 
-from src.utils import get_relative_coords, read_labels
+from utils import get_relative_coords, read_labels
 
 # TODO: check if migration from torchvision to
 #  albumentations for bounding box transformations is necessary

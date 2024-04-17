@@ -1,6 +1,6 @@
 import lightning.pytorch as pl
 from torch import optim
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, ReduceLROnPlateau
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from src.models.multiboxloss import MultiBoxLoss
@@ -57,6 +57,5 @@ class SSDLightning(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
-        scheduler = MultiStepLR(optimizer, milestones=[10, 20],
-                                gamma=0.1)  # Adjust milestones and gamma as needed
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=5, verbose=True)
         return [optimizer], [scheduler]

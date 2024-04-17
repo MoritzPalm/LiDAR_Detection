@@ -13,18 +13,16 @@ from lightning.pytorch.callbacks import (
 from lightning.pytorch.loggers import WandbLogger
 from codecarbon import track_emissions
 
-from src.models.dataset import LiDARDataset, make_loaders, transforms
-from src.models.ssd_lightning import SSDLightning as SSD
+from models.dataset import LiDARDataset, make_loaders, transforms
+from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
 if torch.cuda.is_available():
     devices = find_usable_cuda_devices(config.devices)
 else:
     devices = 1
-torch.set_float32_matmul_precision("medium")
-
-
-@track_emissions(country_iso_code="NOR")
+torch.set_float32_matmul_precision("medium
+@track_emissions(country_iso_code="NOR", save_to_api=True)
 def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
