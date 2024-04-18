@@ -48,7 +48,6 @@ class SSDLightning(pl.LightningModule):
         self.det_scores.extend(det_scores_batch)
         self.true_bboxes.extend(bboxes)
         self.true_classes.extend(classes)
-        self.true_difficulties.extend([torch.zeros(len(bboxes), dtype=torch.bool)])
         preds = []
         for det_boxes, det_labels, det_scores in (
                 zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
@@ -67,8 +66,13 @@ class SSDLightning(pl.LightningModule):
     def on_validation_epoch_end(self):
         val_mAP = self.mean_average_precision.compute()["map"]
         self.log("val_mAP", val_mAP, on_epoch=True, prog_bar=True)
-        custom_map = calculate_mAP(self.det_boxes, self.det_labels, self.det_scores,
-                                   self.true_bboxes, self.true_classes, self.true_difficulties)
+        self.true_difficulties.extend([torch.zeros(len(box), dtype=torch.bool,
+                                                   device=self.device)
+                                       for box in self.true_classes])
+
+        custom_APs, custom_map = calculate_mAP(self.det_boxes, self.det_labels, self.det_scores,
+                                   self.true_bboxes, self.true_classes,
+                                   self.true_difficulties, self.device)
         self.log("custom_map", custom_map, on_epoch=True, prog_bar=True)
         self.det_boxes.clear()
         self.det_labels.clear()
