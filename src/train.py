@@ -11,7 +11,7 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
-from codecarbon import track_emissions
+#from codecarbon import track_emissions
 
 from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
@@ -22,9 +22,10 @@ if torch.cuda.is_available():
 else:
     devices = 1
 torch.set_float32_matmul_precision("medium")
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-@track_emissions(country_iso_code="NOR")
+#@track_emissions(country_iso_code="NOR")
 def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
