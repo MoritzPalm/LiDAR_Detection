@@ -24,7 +24,7 @@ else:
 torch.set_float32_matmul_precision("medium")
 
 
-@track_emissions(country_iso_code="NOR", save_to_api=True)
+@track_emissions(country_iso_code="NOR")
 def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
