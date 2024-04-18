@@ -12,7 +12,7 @@ class SSDLightning(pl.LightningModule):
         super().__init__()
         self.config = config
 
-        self.model = SSD300(self.config.num_classes, device=self.device)
+        self.model = SSD300(self.config.num_classes)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
         self.mean_average_precision = MeanAveragePrecision(box_format="cxcywh",
                                                            iou_type="bbox",
@@ -44,9 +44,14 @@ class SSDLightning(pl.LightningModule):
         targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
         self.mean_average_precision.update(preds=preds, target=targets)
-        self.log("val_mAP", self.mean_average_precision.compute()["map"],
-                 prog_bar=True, on_epoch=True, on_step=False)
         return loss
+
+    def on_validation_epoch_start(self) -> None:
+        self.mean_average_precision.reset()
+
+    def validation_epoch_end(self, outputs):
+        val_mAP = self.mean_average_precision.compute()["map"]
+        self.log("val_mAP", val_mAP, on_epoch=True, prog_bar=True)
 
     def test_step(self):
         pass

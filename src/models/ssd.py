@@ -401,11 +401,10 @@ class SSD300(nn.Module):
     auxiliary, and prediction convolutions.
     """
 
-    def __init__(self, n_classes, device):
+    def __init__(self, n_classes):
         super(SSD300, self).__init__()
 
         self.n_classes = n_classes
-        self.device = device
 
         self.base = VGGBase()
         self.aux_convs = AuxiliaryConvolutions()

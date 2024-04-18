@@ -62,7 +62,7 @@ def train():
                              LearningRateMonitor(logging_interval="step"),
                              ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
                                                           config.wandb_experiment_name),
-                                             filename="best_model-epoch={epoch:02d}-val_acc={val/acc:.4f}",
+                                             filename="best_model-epoch={epoch:02d}-val_mAP={val_mAP.4f}",
                                              auto_insert_metric_name=False,
                                              save_weights_only=True,
                                              save_top_k=1),
