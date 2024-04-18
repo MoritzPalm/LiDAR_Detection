@@ -1,10 +1,12 @@
 import lightning.pytorch as pl
+import torch
 from torch import optim
 from torch.optim.lr_scheduler import MultiStepLR, ReduceLROnPlateau
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from models.multiboxloss import MultiBoxLoss
 from models.ssd import SSD300
+from utils import calculate_mAP
 
 
 class SSDLightning(pl.LightningModule):
@@ -18,6 +20,8 @@ class SSDLightning(pl.LightningModule):
                                                            iou_type="bbox",
                                                            class_metrics=True,
                                                            backend="faster_coco_eval")
+        self.preds = None
+        self.targets = None
 
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch
@@ -34,7 +38,7 @@ class SSDLightning(pl.LightningModule):
         det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
             bboxes_pred, classes_pred,
             min_score=0.01, max_overlap=0.45,
-            top_k=50)
+            top_k=100)
         preds = []
         for det_boxes, det_labels, det_scores in (
                 zip(det_boxes_batch, det_labels_batch, det_scores_batch)):
@@ -44,6 +48,8 @@ class SSDLightning(pl.LightningModule):
         targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
         self.mean_average_precision.update(preds=preds, target=targets)
+        self.preds = preds
+        self.targets = targets
         return loss
 
     def on_validation_epoch_start(self) -> None:
@@ -52,6 +58,16 @@ class SSDLightning(pl.LightningModule):
     def on_validation_epoch_end(self):
         val_mAP = self.mean_average_precision.compute()["map"]
         self.log("val_mAP", val_mAP, on_epoch=True, prog_bar=True)
+        det_boxes = self.preds.get("boxes")
+        det_labels = self.preds.get("labels")
+        det_scores = self.preds.get("scores")
+        true_bboxes = self.targets.get("boxes")
+        true_classes = self.targets.get("labels")
+        true_difficulties = [torch.zeros(len(true_bboxes[i]), dtype=torch.bool)
+                             for i in range(len(true_bboxes))]
+        custom_map = calculate_mAP(det_boxes, det_labels, det_scores,
+                                   true_bboxes, true_classes, true_difficulties)
+        self.log("custom_map", custom_map, on_epoch=True, prog_bar=True)
 
     def test_step(self):
         pass
