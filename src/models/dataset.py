@@ -119,11 +119,14 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     return train_loader, validation_loader, test_loader
 
 
+# mean and std from the ImageNet dataset
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
 transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float32, scale=True),
     v2.Resize((300, 300)),
-    v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    v2.Normalize(mean, std),
 ])
 
 if __name__ == "__main__":

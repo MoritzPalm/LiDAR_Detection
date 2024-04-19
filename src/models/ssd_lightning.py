@@ -70,9 +70,10 @@ class SSDLightning(pl.LightningModule):
                                                    device=self.device)
                                        for box in self.true_classes])
 
-        custom_APs, custom_map = calculate_mAP(self.det_boxes, self.det_labels, self.det_scores,
-                                   self.true_bboxes, self.true_classes,
-                                   self.true_difficulties, self.device)
+        custom_APs, custom_map = calculate_mAP(self.det_boxes, self.det_labels,
+                                               self.det_scores,
+                                               self.true_bboxes, self.true_classes,
+                                               self.true_difficulties, self.device)
         self.log("custom_map", custom_map, on_epoch=True, prog_bar=True)
         self.det_boxes.clear()
         self.det_labels.clear()
@@ -91,4 +92,5 @@ class SSDLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
         scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=5, verbose=True)
-        return {'optimizer': optimizer, 'lr_scheduler': scheduler, "monitor": "train_loss"}
+        return {'optimizer': optimizer, 'lr_scheduler': scheduler,
+                "monitor": "train_loss"}
