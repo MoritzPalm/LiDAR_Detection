@@ -10,6 +10,7 @@ from torchvision import tv_tensors
 from torchvision.transforms import v2
 from torchvision.utils import draw_bounding_boxes
 import torchvision
+import matplotlib.pyplot as plt
 
 from utils import get_relative_coords, read_labels, get_absolute_coords
 from visualization.visualize_img_boxes import visualize_dataset
@@ -52,6 +53,11 @@ class LiDARDataset(Dataset):
 
     def __getitem__(self, idx: int) -> (
             tuple)[torch.Tensor, torch.Tensor, tv_tensors.BoundingBoxes]:
+        """
+
+        :param idx:
+        :return: image, bounding boxes in absolute xywh format, labels
+        """
         idx = str(idx).zfill(6)  # filling with zeros to match the 6 digit file name
         img_path = os.path.join(self.img_dir, f"frame_{idx}.PNG")
         label_path = os.path.join(self.labels_dir, f"frame_{idx}.txt")
@@ -60,28 +66,29 @@ class LiDARDataset(Dataset):
         abs_labels = []
         classes = []
         for label in labels:
-            class_, x, y, w, h = get_absolute_coords(label, image.shape[0], image.shape[1])
+            class_, x, y, w, h = get_absolute_coords(label, image.shape[2],
+                                                     image.shape[1])
             abs_labels.append([x, y, w, h])
             classes.append(class_)
         classes = torch.tensor(classes, dtype=torch.long)
         bboxes = tv_tensors.BoundingBoxes(
             abs_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
-            canvas_size=(image.shape[0], image.shape[1]),
+            canvas_size=(image.shape[1], image.shape[2]),
         )
+        bbox_label_dict = {
+            "boxes": bboxes,
+            "labels": classes,
+        }
         if self.transform:
-            box_label_dict = {
-                "boxes": bboxes,
-                "labels": classes,
-            }
-            image, bboxes = self.transform(image, box_label_dict)
-        return image, bboxes.get("boxes"), bboxes.get("labels")
+            image, bbox_label_dict = self.transform(image, bbox_label_dict)
+        return image, bbox_label_dict.get("boxes"), bbox_label_dict.get("labels")
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
         -> tuple[torch.utils.data.DataLoader,
-                 torch.utils.data.DataLoader,
-                 torch.utils.data.DataLoader]:
+        torch.utils.data.DataLoader,
+        torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
     :param validation_split: percentage of the dataset to use for validation and testing
@@ -128,13 +135,14 @@ mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 train_transforms = v2.Compose([
     v2.ToImage(),
-    v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
-    #v2.Pad([0, 88, 0, 88], fill=0), # padding top and bottom to get a total size of 300
+    #v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
+    v2.Pad([0, 88, 0, 88], fill=0), # padding top and bottom to get a total size of 300
     #v2.Normalize(mean, std),
-    #v2.RandomIoUCrop(),
+    v2.RandomIoUCrop(),
+    v2.SanitizeBoundingBoxes(),
     v2.Resize((300, 300)),
     #v2.SanitizeBoundingBoxes(),
-    v2.ToDtype(torch.float, scale=True),
+    #v2.ConvertImageDtype(torch.float32),
 ])
 
 validation_transforms = v2.Compose([
@@ -142,7 +150,7 @@ validation_transforms = v2.Compose([
     v2.ToDtype(torch.float, scale=True),
     v2.Normalize(mean, std),
     v2.Resize((300, 300)),
-    v2.ToDtype(torch.float, scale=True),
+    #v2.ToDtype(torch.float, scale=True),
 ])
 
 if __name__ == "__main__":
@@ -160,12 +168,16 @@ if __name__ == "__main__":
     )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader, test_loader = make_loaders(dataset,
-                                                                batch_size=10,
+                                                                batch_size=1,
                                                                 validation_split=.2)
     image_batch, boxes_batch, labels_batch = next(iter(train_loader))
-    image = image_batch[0]
-    boxes = boxes_batch[0]
-    labels = labels_batch[0]
-    image = torch.tensor(image, dtype=torch.uint8)
-    draw_bounding_boxes(image=image, boxes=torchvision.ops.box_convert(boxes, 'xywh', 'xyxy'), labels=labels)
+    image = v2.ToDtype(torch.uint8)(image_batch[0])
+    boxes = torchvision.ops.box_convert(boxes_batch[0], "xywh", "xyxy")
+    #boxes = boxes_batch[0]
+    labels = [str(x) for x in labels_batch[0].tolist()]
+    image_tensor_with_boxes = draw_bounding_boxes(image=image, boxes=boxes,
+                                                  labels=labels, fill=True)
+    plt.imshow(image_tensor_with_boxes.permute(1, 2, 0))
+    plt.show()
 
+    #visualize_dataset(image.permute(1, 2, 0), boxes, labels, save=False)

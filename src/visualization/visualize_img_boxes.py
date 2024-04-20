@@ -49,7 +49,7 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
     """
 
     :param img: ndarray of shape (H, W, C)
-    :param boxes:
+    :param boxes: bounding boxes object with absolute coordinates
     :param labels:
     :param save:
     :return:
@@ -57,14 +57,10 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
     plt.imshow(img)
     img_height, img_width = img.shape[:2]
     for box, label in zip(boxes, labels):
-        x = box[0] * img_width  # this is the center of the rectangle
-        y = box[1] * img_height  # this is the center of the rectangle
-        w = box[2] * img_width
-        h = box[3] * img_height
         rect = patches.Rectangle(
-            (x, y),
-            w,
-            h,
+            (box[0], box[1]),
+            box[2],
+            box[3],
             linewidth=1,
             edgecolor=color_class_dict[classes(int(label)).name],
             facecolor="none",

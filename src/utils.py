@@ -63,17 +63,17 @@ def get_absolute_coords(label: str, img_width: int, img_height: int) -> tuple:
     where x, y are the top left corner of the rectangle
     """
 
-    class_, x, y, w, h = get_relative_coords(label)
+    class_, rel_x, rel_y, rel_w, rel_h = get_relative_coords(label)
     # scaling all values to the image size
-    x = x * img_width  # this is the center of the rectangle
-    y = y * img_height  # this is the center of the rectangle
-    w = w * img_width
-    h = h * img_height
+    abs_x = rel_x * img_width
+    abs_y = rel_y * img_height
+    abs_w = rel_w * img_width
+    abs_h = rel_h * img_height
 
     # getting the top left corner
-    x = x - w / 2
-    y = y - h / 2
-    return class_, x, y, w, h
+    x = abs_x - abs_w / 2
+    y = abs_y - abs_h / 2
+    return class_, x, y, abs_w, abs_h
 
 
 def decimate(tensor, m):
