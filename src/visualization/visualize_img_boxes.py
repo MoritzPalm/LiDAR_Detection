@@ -65,7 +65,7 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
             (x, y),
             w,
             h,
-            linewidth=5,
+            linewidth=1,
             edgecolor=color_class_dict[classes(int(label)).name],
             facecolor="none",
         )

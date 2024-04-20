@@ -8,8 +8,10 @@ from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import tv_tensors
 from torchvision.transforms import v2
+from torchvision.utils import draw_bounding_boxes
+import torchvision
 
-from utils import get_relative_coords, read_labels
+from utils import get_relative_coords, read_labels, get_absolute_coords
 from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents erros with too many open files
@@ -55,15 +57,15 @@ class LiDARDataset(Dataset):
         label_path = os.path.join(self.labels_dir, f"frame_{idx}.txt")
         image = tv_tensors.Image(Image.open(img_path))
         labels = read_labels(Path(label_path))
-        rel_labels = []
+        abs_labels = []
         classes = []
         for label in labels:
-            class_, x, y, w, h = get_relative_coords(label)
-            rel_labels.append([x, y, w, h])
+            class_, x, y, w, h = get_absolute_coords(label, image.shape[0], image.shape[1])
+            abs_labels.append([x, y, w, h])
             classes.append(class_)
         classes = torch.tensor(classes, dtype=torch.long)
         bboxes = tv_tensors.BoundingBoxes(
-            rel_labels,
+            abs_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
             canvas_size=(image.shape[0], image.shape[1]),
         )
@@ -73,7 +75,7 @@ class LiDARDataset(Dataset):
                 "labels": classes,
             }
             image, bboxes = self.transform(image, box_label_dict)
-        return image, bboxes.get("labels"), bboxes.get("boxes")
+        return image, bboxes.get("boxes"), bboxes.get("labels")
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
@@ -127,6 +129,7 @@ std = [0.229, 0.224, 0.225]
 train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
+    #v2.Pad([0, 88, 0, 88], fill=0), # padding top and bottom to get a total size of 300
     #v2.Normalize(mean, std),
     #v2.RandomIoUCrop(),
     v2.Resize((300, 300)),
@@ -159,19 +162,10 @@ if __name__ == "__main__":
     train_loader, validation_loader, test_loader = make_loaders(dataset,
                                                                 batch_size=10,
                                                                 validation_split=.2)
-    imgs_list = []
-    classes_list = []
-    bboxes_list = []
-    for i, (img, classes, bboxes) in enumerate(validation_loader):
-        imgs_list.extend(img)
-        classes_list.extend(classes)
-        bboxes_list.extend(bboxes)
-    print(f"img: {len(imgs_list)}, classes: {len(classes_list)}, "
-          f"bboxes: {len(bboxes_list)}")
-    # plot transformed image with boxes
-    n = 10
-    image = imgs_list[n].cpu().numpy().transpose(1, 2, 0)
-    boxes = bboxes_list[n]
-    labels = classes_list[n]
-    visualize_dataset(image, boxes, labels=labels, save=False)
+    image_batch, boxes_batch, labels_batch = next(iter(train_loader))
+    image = image_batch[0]
+    boxes = boxes_batch[0]
+    labels = labels_batch[0]
+    image = torch.tensor(image, dtype=torch.uint8)
+    draw_bounding_boxes(image=image, boxes=torchvision.ops.box_convert(boxes, 'xywh', 'xyxy'), labels=labels)
 
