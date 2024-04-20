@@ -11,9 +11,6 @@ from torchvision.transforms import v2
 
 from utils import get_relative_coords, read_labels
 
-# TODO: check if migration from torchvision to
-#  albumentations for bounding box transformations is necessary
-
 # this prevents erros with too many open files
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -63,14 +60,18 @@ class LiDARDataset(Dataset):
             class_, x, y, w, h = get_relative_coords(label)
             rel_labels.append([x, y, w, h])
             classes.append(class_)
-        classes = torch.LongTensor(classes)
+        classes = torch.tensor(classes, dtype=torch.long)
         bboxes = tv_tensors.BoundingBoxes(
             rel_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
             canvas_size=(image.shape[0], image.shape[1]),
         )
         if self.transform:
-            image, bboxes = self.transform(image, bboxes)
+            box_label_dict = {
+                "boxes": bboxes,
+                "labels": classes,
+            }
+            image, bboxes = self.transform(image, box_label_dict)
         return image, classes, bboxes
 
 
@@ -124,9 +125,12 @@ mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 transforms = v2.Compose([
     v2.ToImage(),
-    v2.ToDtype(torch.float32, scale=True),
-    v2.Resize((300, 300)),
+    v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
     v2.Normalize(mean, std),
+    #v2.RandomIoUCrop(),
+    v2.Resize((300, 300)),
+    #v2.SanitizeBoundingBoxes(),
+    v2.ToDtype(torch.float, scale=True),
 ])
 
 if __name__ == "__main__":
