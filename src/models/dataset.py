@@ -10,6 +10,7 @@ from torchvision import tv_tensors
 from torchvision.transforms import v2
 
 from utils import get_relative_coords, read_labels
+from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents erros with too many open files
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -72,7 +73,7 @@ class LiDARDataset(Dataset):
                 "labels": classes,
             }
             image, bboxes = self.transform(image, box_label_dict)
-        return image, classes, bboxes
+        return image, bboxes.get("labels"), bboxes.get("boxes")
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
@@ -123,13 +124,21 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 # mean and std from the ImageNet dataset
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-transforms = v2.Compose([
+train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
-    v2.Normalize(mean, std),
+    #v2.Normalize(mean, std),
     #v2.RandomIoUCrop(),
     v2.Resize((300, 300)),
     #v2.SanitizeBoundingBoxes(),
+    v2.ToDtype(torch.float, scale=True),
+])
+
+validation_transforms = v2.Compose([
+    v2.ToImage(),
+    v2.ToDtype(torch.float, scale=True),
+    v2.Normalize(mean, std),
+    v2.Resize((300, 300)),
     v2.ToDtype(torch.float, scale=True),
 ])
 
@@ -144,7 +153,7 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=transforms,
+        transform=train_transforms,
     )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader, test_loader = make_loaders(dataset,
@@ -159,3 +168,10 @@ if __name__ == "__main__":
         bboxes_list.extend(bboxes)
     print(f"img: {len(imgs_list)}, classes: {len(classes_list)}, "
           f"bboxes: {len(bboxes_list)}")
+    # plot transformed image with boxes
+    n = 10
+    image = imgs_list[n].cpu().numpy().transpose(1, 2, 0)
+    boxes = bboxes_list[n]
+    labels = classes_list[n]
+    visualize_dataset(image, boxes, labels=labels, save=False)
+

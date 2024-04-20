@@ -3,22 +3,21 @@ import torch
 from utils import *
 from PIL import Image, ImageDraw, ImageFont
 
+from models.ssd_lightning import SSDLightning
+from dataset import train_transforms, validation_transforms
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load model checkpoint
-checkpoint = './checkpoints/SSD300_finetune/best_model-epoch=99-val_acc=0.0000.ckpt'
+checkpoint = '../checkpoints/SSD300_finetune/best_model-epoch=99-val_acc=0.0000.ckpt'
+model = SSDLightning.load_from_checkpoint(checkpoint)
 checkpoint = torch.load(checkpoint)
 start_epoch = checkpoint['epoch'] + 1
 print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
-model = checkpoint['model']
 model = model.to(device)
 model.eval()
 
 # Transforms
-resize = transforms.Resize((300, 300))
-to_tensor = transforms.ToTensor()
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
 
 
 def detect(original_image, min_score, max_overlap, top_k, suppress=None):
@@ -38,7 +37,7 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
     """
 
     # Transform
-    image = normalize(to_tensor(resize(original_image)))
+    image = validation_transforms(original_image)
 
     # Move to default device
     image = image.to(device)

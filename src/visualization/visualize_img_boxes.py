@@ -4,8 +4,10 @@ from pathlib import Path
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-import PIL.Image as Image
+import PIL.Image as PIL
 import seaborn as sns
+import numpy as np
+import torchvision.tv_tensors
 
 from src.utils import get_absolute_coords, read_labels
 
@@ -21,12 +23,11 @@ color_class_dict = {
 }
 
 
-def visualize_predictions(image_path: Path, labels: list, save: bool):
-    img = Image.open(image_path)
+def visualize_predictions(img: PIL.Image | np.ndarray, labels: list, save: bool):
     plt.imshow(img)
     for label in labels:
-        width = img.size[0]
-        height = img.size[1]
+        width = img.shape[0]
+        height = img.shape[1]
         class_, x, y, w, h = get_absolute_coords(label, width, height)
         class_name = classes(class_).name
         rect = patches.Rectangle(
@@ -41,6 +42,38 @@ def visualize_predictions(image_path: Path, labels: list, save: bool):
     if save:
         plt.savefig("example.png")
     plt.show()
+
+
+def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBoxes,
+                      labels: list, save: bool) -> None:
+    """
+
+    :param img: ndarray of shape (H, W, C)
+    :param boxes:
+    :param labels:
+    :param save:
+    :return:
+    """
+    plt.imshow(img)
+    img_height, img_width = img.shape[:2]
+    for box, label in zip(boxes, labels):
+        x = box[0] * img_width  # this is the center of the rectangle
+        y = box[1] * img_height  # this is the center of the rectangle
+        w = box[2] * img_width
+        h = box[3] * img_height
+        rect = patches.Rectangle(
+            (x, y),
+            w,
+            h,
+            linewidth=5,
+            edgecolor=color_class_dict[classes(int(label)).name],
+            facecolor="none",
+        )
+        plt.gca().add_patch(rect)
+    if save:
+        plt.savefig("example.png")
+    plt.show()
+
 
 
 # Example usage

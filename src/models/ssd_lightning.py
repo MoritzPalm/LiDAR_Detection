@@ -27,6 +27,8 @@ class SSDLightning(pl.LightningModule):
         self.true_classes = []
         self.true_difficulties = []
 
+        self.save_hyperparameters()
+
     def training_step(self, batch, batch_idx):
         images, classes, bboxes = batch
         bboxes_pred, classes_pred = self.model(images)
