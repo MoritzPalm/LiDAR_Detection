@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from pathlib import Path
+from typing import List, Tuple
 
 import torch
 
@@ -74,6 +75,53 @@ def get_absolute_coords(label: str, img_width: int, img_height: int) -> tuple:
     x = abs_x - abs_w / 2
     y = abs_y - abs_h / 2
     return class_, x, y, abs_w, abs_h
+
+
+def get_rel_from_abs(x: float, y: float, w: float, h: float,
+                     img_width: int, img_height: int) -> tuple:
+    """
+    Get the relative coordinates of the bounding box
+    :param x: x coordinate of the top left corner
+    :param y: y coordinate of the top left corner
+    :param w: width of the rectangle
+    :param h: height of the rectangle
+    :param img_width: width of the image in pixels
+    :param img_height: height of the image in pixels
+    :return: list with elements [x, y, w, h]
+    where x, y are the center of the rectangle
+    """
+    rel_x = (x + w / 2) / img_width
+    rel_y = (y + h / 2) / img_height
+    rel_w = w / img_width
+    rel_h = h / img_height
+    return rel_x, rel_y, rel_w, rel_h
+
+
+def get_abs_from_rel_batch(rel_boxes: torch.Tensor, img_shape: Tuple[int, int]) -> torch.Tensor:
+    """
+    Get the absolute coordinates of a batch of bounding boxes.
+
+    :param rel_boxes: Tensor of shape (batch_size, 4) representing the relative coordinates of boxes.
+    :param img_shape: Tuple (img_width, img_height) representing the shape of the image.
+    :return: Tensor of shape (batch_size, 4) representing the absolute coordinates of boxes.
+    """
+    abs_boxes = []
+    img_width, img_height = img_shape
+
+    for rel_box in rel_boxes:
+        rel_x, rel_y, rel_w, rel_h = rel_box
+
+        if rel_w < 0 or rel_h < 0:
+            raise ValueError("Width and height must be non-negative.")
+
+        abs_x = rel_x * img_width - rel_w * img_width / 2
+        abs_y = rel_y * img_height - rel_h * img_height / 2
+        abs_w = rel_w * img_width
+        abs_h = rel_h * img_height
+
+        abs_boxes.append((abs_x, abs_y, abs_w, abs_h))
+
+    return torch.tensor(abs_boxes)
 
 
 def decimate(tensor, m):

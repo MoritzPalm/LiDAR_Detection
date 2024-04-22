@@ -30,16 +30,16 @@ class SSDLightning(pl.LightningModule):
         self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
-        images, classes, bboxes = batch
+        images, bboxes, classes = batch
         bboxes_pred, classes_pred = self.model(images)
-        loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
+        loss = self.compute_loss(classes_pred, bboxes_pred, bboxes, classes)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        images, classes, bboxes = batch
+        images, bboxes, classes = batch
         bboxes_pred, classes_pred = self.model(images)
-        loss = self.compute_loss(classes_pred, bboxes_pred, classes, bboxes)
+        loss = self.compute_loss(classes_pred, bboxes_pred, bboxes, classes)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
             bboxes_pred, classes_pred,
@@ -87,7 +87,7 @@ class SSDLightning(pl.LightningModule):
     def test_step(self):
         pass
 
-    def compute_loss(self, classes_pred, bboxes_pred, classes, bboxes):
+    def compute_loss(self, classes_pred, bboxes_pred, bboxes, classes):
         loss = self.loss_fn(bboxes_pred, classes_pred, bboxes, classes)
         return loss
 

@@ -12,7 +12,8 @@ from torchvision.utils import draw_bounding_boxes
 import torchvision
 import matplotlib.pyplot as plt
 
-from utils import get_relative_coords, read_labels, get_absolute_coords
+from utils import get_relative_coords, read_labels, get_absolute_coords, \
+    get_rel_from_abs, get_abs_from_rel_batch
 from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents erros with too many open files
@@ -74,7 +75,7 @@ class LiDARDataset(Dataset):
         bboxes = tv_tensors.BoundingBoxes(
             abs_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
-            canvas_size=(image.shape[1], image.shape[2]),
+            canvas_size=(image.shape[1], image.shape[2]), #  TODO check if this is the wrong way around
         )
         bbox_label_dict = {
             "boxes": bboxes,
@@ -82,6 +83,18 @@ class LiDARDataset(Dataset):
         }
         if self.transform:
             image, bbox_label_dict = self.transform(image, bbox_label_dict)
+        for i, box in enumerate(bbox_label_dict.get("boxes")):
+            x_abs, y_abs, w_abs, h_abs = box[:4]
+            x_rel, y_rel, w_rel, h_rel = get_rel_from_abs(x_abs, y_abs, w_abs, h_abs,
+                                                               image.shape[2],
+                                                               image.shape[1])
+            rel_labels = [x_rel, y_rel, w_rel, h_rel]
+            box_new = tv_tensors.BoundingBoxes(rel_labels,
+                                               format=tv_tensors.BoundingBoxFormat.XYWH,
+                                               canvas_size=(image.shape[1],
+                                                            image.shape[2])
+                                               )
+            bbox_label_dict.get("boxes")[i] = box_new
         return image, bbox_label_dict.get("boxes"), bbox_label_dict.get("labels")
 
 
@@ -135,20 +148,20 @@ mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 train_transforms = v2.Compose([
     v2.ToImage(),
-    v2.ToDtype(torch.float, scale=True),    # this needs to come before Normalize
-    v2.Pad([0, 88, 0, 88], fill=0), # padding top and bottom to get a total size of 300
-    v2.Normalize(mean, std),
-    v2.RandomIoUCrop(),
-    v2.SanitizeBoundingBoxes(),
+    v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
+    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
+    #v2.Normalize(mean, std),
+    #v2.RandomIoUCrop(),
+    #v2.SanitizeBoundingBoxes(),
     v2.Resize((300, 300)),
     v2.SanitizeBoundingBoxes(),
-    v2.ConvertImageDtype(torch.float32),
+    #v2.ConvertImageDtype(torch.float),
 ])
 
 validation_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),
-    v2.Pad([0, 88, 0, 88], fill=0)
+    v2.Pad([0, 88, 0, 88], fill=0),
     v2.Normalize(mean, std),
     v2.Resize((300, 300)),
     v2.SanitizeBoundingBoxes(),
@@ -173,13 +186,14 @@ if __name__ == "__main__":
                                                                 batch_size=1,
                                                                 validation_split=.2)
     image_batch, boxes_batch, labels_batch = next(iter(train_loader))
-    image = v2.ToDtype(torch.uint8)(image_batch[0])
-    boxes = torchvision.ops.box_convert(boxes_batch[0], "xywh", "xyxy")
+    image = image_batch[0]
+    boxes = boxes_batch[0]
+    boxes = get_abs_from_rel_batch(boxes, (image.shape[2], image.shape[1]))
+    #boxes = torchvision.ops.box_convert(boxes, "xywh", "xyxy")
     #boxes = boxes_batch[0]
     labels = [str(x) for x in labels_batch[0].tolist()]
-    image_tensor_with_boxes = draw_bounding_boxes(image=image, boxes=boxes,
-                                                  labels=labels, fill=True)
-    plt.imshow(image_tensor_with_boxes.permute(1, 2, 0))
+    #image_tensor_with_boxes = draw_bounding_boxes(image=image, boxes=boxes,
+    #                                              labels=labels, fill=True)
+    #plt.imshow(image_tensor_with_boxes.permute(1, 2, 0))
+    visualize_dataset(image.permute(1, 2, 0), boxes, labels, save=False)
     plt.show()
-
-    #visualize_dataset(image.permute(1, 2, 0), boxes, labels, save=False)
