@@ -109,7 +109,7 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     :param batch_size:
     :return:
     """
-    random_seed = 42
+    random_seed = 40
     rng = np.random.default_rng(random_seed)
 
     dataset_size = len(dataset)
@@ -149,7 +149,7 @@ std = [0.229, 0.224, 0.225]
 train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
-    v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
+    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
     #v2.Normalize(mean, std),
     #v2.RandomIoUCrop(),
     #v2.SanitizeBoundingBoxes(),

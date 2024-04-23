@@ -46,7 +46,7 @@ def train():
         model = SSD(config)
 
     trainer = pl.Trainer(accelerator="auto",
-                         devices=devices,
+                         devices=[3],
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
                          enable_progress_bar=config.enable_progress_bar,
