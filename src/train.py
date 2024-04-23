@@ -36,7 +36,7 @@ def train():
      validation_loader,
      test_loader) = make_loaders(dataset,
                                  batch_size=config.batch_size,
-                                 validation_split=.2)
+                                 validation_split=1-config.train_split_ratio)
 
     if config.checkpoint_path:
         model = SSD.load_from_checkpoint(checkpoint_path=config.checkpoint_path,

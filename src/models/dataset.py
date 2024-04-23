@@ -13,8 +13,7 @@ import torchvision
 import matplotlib.pyplot as plt
 from pybboxes import BoundingBox
 
-from utils import get_relative_coords, read_labels, get_absolute_coords, \
-    get_rel_from_abs, get_abs_from_rel_batch, voc_to_albu
+from utils import get_relative_coords, read_labels, voc_to_albu
 from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents erros with too many open files
@@ -150,10 +149,12 @@ train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
     #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
-    #v2.Normalize(mean, std),
-    #v2.RandomIoUCrop(),
-    #v2.SanitizeBoundingBoxes(),
-    v2.Resize((300, 300)),
+    v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
+    v2.RandomIoUCrop(),
+    v2.SanitizeBoundingBoxes(),
+    v2.RandomResizedCrop(size=(300, 300), antialias=True),
+    #v2.Resize((300, 300)),
+    v2.ClampBoundingBoxes(),
     v2.SanitizeBoundingBoxes(),
     #v2.ConvertImageDtype(torch.float),
 ])
@@ -192,12 +193,6 @@ if __name__ == "__main__":
 
     image = image_batch[0]
     boxes = boxes_batch[0]
-    #boxes = get_abs_from_rel_batch(boxes, (image.shape[2], image.shape[1]))
-    #boxes = torchvision.ops.box_convert(boxes, "xywh", "xyxy")
-    #boxes = boxes_batch[0]
     labels = [str(x) for x in labels_batch[0].tolist()]
-    #image_tensor_with_boxes = draw_bounding_boxes(image=image, boxes=boxes,
-    #                                              labels=labels, fill=True)
-    #plt.imshow(image_tensor_with_boxes.permute(1, 2, 0))
     visualize_dataset(image.permute(1, 2, 0), boxes, labels, save=False)
     plt.show()

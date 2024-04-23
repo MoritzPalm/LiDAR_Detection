@@ -6,7 +6,7 @@ batch_size: 32
 
 in_channels: 3
 num_classes: 8
-use_pretrained_weights: true
+use_pretrained_weights: True
 
 test_model: false
 checkpoint_path: #../checkpoints
@@ -19,6 +19,6 @@ enable_progress_bar: True
 wandb_project: LiDAR_Object_Detection
 wandb_experiment_name: SSD300_finetune
 
-train_split_ratio: 0.8
+train_split_ratio: 0.9
 data_root: ../../data
 checkpoint_folder: ./checkpoints/
