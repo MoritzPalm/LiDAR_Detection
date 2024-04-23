@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import PIL.Image as PIL
 import seaborn as sns
 import numpy as np
-import torchvision.tv_tensors
+import torch
 
-from src.utils import get_absolute_coords, read_labels
+from src.utils import get_absolute_coords, read_labels, get_abs_from_rel_batch
 
 # classes defined in data/NAPLabel-LiDAR/names.txt
 classes = Enum(
@@ -44,18 +44,20 @@ def visualize_predictions(img: PIL.Image | np.ndarray, labels: list, save: bool)
     plt.show()
 
 
-def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBoxes,
+def visualize_dataset(img: np.ndarray, boxes: torch.Tensor,
                       labels: list, save: bool) -> None:
     """
 
     :param img: ndarray of shape (H, W, C)
-    :param boxes: bounding boxes object with absolute coordinates
+    :param boxes: bounding boxes object with relative xywh coordinates
     :param labels:
     :param save:
     :return:
     """
     plt.imshow(img)
     img_height, img_width = img.shape[:2]
+    boxes = get_abs_from_rel_batch(boxes, (img_width, img_height))
+
     for box, label in zip(boxes, labels):
         rect = patches.Rectangle(
             (box[0], box[1]),
