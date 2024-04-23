@@ -8,6 +8,7 @@ import PIL.Image as PIL
 import seaborn as sns
 import numpy as np
 import torchvision.tv_tensors
+from torchvision.ops.boxes import box_convert
 
 from src.utils import get_absolute_coords, read_labels
 
@@ -56,13 +57,15 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
     """
     plt.imshow(img)
     img_height, img_width = img.shape[:2]
-    for box, label in zip(boxes, labels):
+    abs_boxes = box_convert(boxes, in_fmt='xyxy', out_fmt='xyxy') * np.array(
+        [img_width, img_height, img_width, img_height])
+    for box, label in zip(abs_boxes, labels):
         rect = patches.Rectangle(
             (box[0], box[1]),
-            box[2],
-            box[3],
+            box[2] - box[0],
+            box[3] - box[1],
             linewidth=1,
-            edgecolor=color_class_dict[classes(int(label)).name],
+            edgecolor='red',  # You can customize the edge color as needed
             facecolor="none",
         )
         plt.gca().add_patch(rect)

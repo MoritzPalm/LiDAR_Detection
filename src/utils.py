@@ -97,6 +97,33 @@ def get_rel_from_abs(x: float, y: float, w: float, h: float,
     return rel_x, rel_y, rel_w, rel_h
 
 
+def voc_to_albu(boxes: torch.Tensor, img_shape: Tuple[int, int]) -> torch.Tensor:
+    """
+    Convert bounding boxes from VOC format (absolute xyxy) to Albumentations format (relative xyxy).
+    :param boxes: Tensor of shape (n_boxes, 4) representing the bounding boxes in VOC format.
+    :param img_shape: Tuple (img_width, img_height) representing the shape of the image.
+    :return: Tensor of shape (n_boxes, 4) representing the bounding boxes in Albumentations format.
+    """
+    if len(img_shape) != 2:
+        raise ValueError("img_shape must be a tuple of length 2.")
+
+    img_width, img_height = img_shape
+
+    if img_width <= 0 or img_height <= 0:
+        raise ValueError("Image dimensions must be positive.")
+
+    albu_boxes = boxes.clone().float()  # Create a copy of the input tensor to avoid modifying the original
+
+    albu_boxes[:, 0] /= img_width  # Convert x_min to relative
+    albu_boxes[:, 1] /= img_height  # Convert y_min to relative
+    albu_boxes[:, 2] /= img_width  # Convert x_max to relative
+    albu_boxes[:, 3] /= img_height  # Convert y_max to relative
+
+    if (albu_boxes[:, 2:] < albu_boxes[:, :2]).any():
+        raise ValueError("Max values must be greater than min values.")
+
+    return albu_boxes
+
 def get_abs_from_rel_batch(rel_boxes: torch.Tensor, img_shape: Tuple[int, int]) -> torch.Tensor:
     """
     Get the absolute coordinates of a batch of bounding boxes.

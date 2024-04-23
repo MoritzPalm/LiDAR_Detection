@@ -11,9 +11,10 @@ from torchvision.transforms import v2
 from torchvision.utils import draw_bounding_boxes
 import torchvision
 import matplotlib.pyplot as plt
+from pybboxes import BoundingBox
 
 from utils import get_relative_coords, read_labels, get_absolute_coords, \
-    get_rel_from_abs, get_abs_from_rel_batch
+    get_rel_from_abs, get_abs_from_rel_batch, voc_to_albu
 from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents erros with too many open files
@@ -48,6 +49,7 @@ class LiDARDataset(Dataset):
         self.img_dir = img_dir
         self.labels_dir = labels_dir
         self.transform = transform
+        self.oob_counter = 0
 
     def __len__(self):
         return len(os.listdir(self.labels_dir)) - 1
@@ -63,39 +65,37 @@ class LiDARDataset(Dataset):
         img_path = os.path.join(self.img_dir, f"frame_{idx}.PNG")
         label_path = os.path.join(self.labels_dir, f"frame_{idx}.txt")
         image = tv_tensors.Image(Image.open(img_path))
-        labels = read_labels(Path(label_path))
-        abs_labels = []
-        classes = []
-        for label in labels:
-            class_, x, y, w, h = get_absolute_coords(label, image.shape[2],
-                                                     image.shape[1])
-            abs_labels.append([x, y, w, h])
-            classes.append(class_)
-        classes = torch.tensor(classes, dtype=torch.long)
+        labels_boxes = read_labels(Path(label_path))
+        voc_boxes = []
+        labels = []
+
+        for label_box_str in labels_boxes:
+            class_, x, y, w, h = get_relative_coords(label_box_str)
+            # converting to voc and checking boundaries
+            yolo_box = BoundingBox.from_yolo(x, y, w, h,
+                                             (image.shape[2], image.shape[1]),
+                                             strict=False)
+            if yolo_box.is_oob:
+                self.oob_counter += 1
+            voc_box = yolo_box.to_voc(return_values=True)
+            voc_boxes.append(voc_box)
+            labels.append(class_)
+        labels = torch.tensor(labels, dtype=torch.long)
         bboxes = tv_tensors.BoundingBoxes(
-            abs_labels,
-            format=tv_tensors.BoundingBoxFormat.XYWH,
-            canvas_size=(image.shape[1], image.shape[2]), #  TODO check if this is the wrong way around
+            torch.tensor(voc_boxes),
+            format=tv_tensors.BoundingBoxFormat.XYXY,
+            canvas_size=(image.shape[1], image.shape[2]),
         )
         bbox_label_dict = {
             "boxes": bboxes,
-            "labels": classes,
+            "labels": labels,
         }
         if self.transform:
             image, bbox_label_dict = self.transform(image, bbox_label_dict)
-        for i, box in enumerate(bbox_label_dict.get("boxes")):
-            x_abs, y_abs, w_abs, h_abs = box[:4]
-            x_rel, y_rel, w_rel, h_rel = get_rel_from_abs(x_abs, y_abs, w_abs, h_abs,
-                                                               image.shape[2],
-                                                               image.shape[1])
-            rel_labels = [x_rel, y_rel, w_rel, h_rel]
-            box_new = tv_tensors.BoundingBoxes(rel_labels,
-                                               format=tv_tensors.BoundingBoxFormat.XYWH,
-                                               canvas_size=(image.shape[1],
-                                                            image.shape[2])
-                                               )
-            bbox_label_dict.get("boxes")[i] = box_new
-        return image, bbox_label_dict.get("boxes"), bbox_label_dict.get("labels")
+        labels = bbox_label_dict.get("labels")
+        voc_bboxes = bbox_label_dict.get("boxes")
+        albu_bboxes = voc_to_albu(voc_bboxes, (image.shape[2], image.shape[1]))
+        return image, albu_bboxes, labels
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
@@ -149,7 +149,7 @@ std = [0.229, 0.224, 0.225]
 train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
-    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
+    v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
     #v2.Normalize(mean, std),
     #v2.RandomIoUCrop(),
     #v2.SanitizeBoundingBoxes(),
@@ -185,10 +185,14 @@ if __name__ == "__main__":
     train_loader, validation_loader, test_loader = make_loaders(dataset,
                                                                 batch_size=1,
                                                                 validation_split=.2)
+    #for i, (image, boxes, labels) in enumerate(train_loader):
+    #    print(i)
+    #print(f"{dataset.oob_counter=}")
     image_batch, boxes_batch, labels_batch = next(iter(train_loader))
+
     image = image_batch[0]
     boxes = boxes_batch[0]
-    boxes = get_abs_from_rel_batch(boxes, (image.shape[2], image.shape[1]))
+    #boxes = get_abs_from_rel_batch(boxes, (image.shape[2], image.shape[1]))
     #boxes = torchvision.ops.box_convert(boxes, "xywh", "xyxy")
     #boxes = boxes_batch[0]
     labels = [str(x) for x in labels_batch[0].tolist()]
