@@ -12,6 +12,9 @@ from torchvision.utils import draw_bounding_boxes
 import torchvision
 import matplotlib.pyplot as plt
 from pybboxes import BoundingBox
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+from albumentations.core.bbox_utils import convert_bbox_to_albumentations
 
 from utils import get_relative_coords, read_labels, voc_to_albu
 from visualization.visualize_img_boxes import visualize_dataset
@@ -34,6 +37,8 @@ def collate_fn(batch):
     classes = []
 
     for b in batch:
+        if b[0] is None or b[1] is None or b[2] is None:
+            continue
         images.append(b[0])
         classes.append(b[1])
         bboxes.append(b[2])
@@ -54,7 +59,7 @@ class LiDARDataset(Dataset):
         return len(os.listdir(self.labels_dir)) - 1
 
     def __getitem__(self, idx: int) -> (
-            tuple)[torch.Tensor, torch.Tensor, tv_tensors.BoundingBoxes]:
+            tuple)[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
 
         :param idx:
@@ -85,16 +90,27 @@ class LiDARDataset(Dataset):
             format=tv_tensors.BoundingBoxFormat.XYXY,
             canvas_size=(image.shape[1], image.shape[2]),
         )
-        bbox_label_dict = {
-            "boxes": bboxes,
-            "labels": labels,
-        }
         if self.transform:
-            image, bbox_label_dict = self.transform(image, bbox_label_dict)
-        labels = bbox_label_dict.get("labels")
-        voc_bboxes = bbox_label_dict.get("boxes")
-        albu_bboxes = voc_to_albu(voc_bboxes, (image.shape[2], image.shape[1]))
-        return image, albu_bboxes, labels
+            transformed = self.transform(image=image.permute(1, 2, 0).numpy(),
+                                         # pytorch image of shape (C, H, W) to numpy image of shape (H, W, C)
+                                         bboxes=bboxes, class_labels=labels)
+            image = transformed.get("image")
+            labels = transformed.get("class_labels")
+            bboxes = transformed.get("bboxes")
+            if image is None or labels is None or bboxes is None:
+                raise ValueError(
+                    f"Error in image {img_path}, no image, labels or bboxes"
+                    f" found after transformation.")
+            labels = torch.tensor(labels)
+        bboxes_list = []
+        for bbox in bboxes:
+            bboxes_list.append(convert_bbox_to_albumentations(bbox,
+                                                              "pascal_voc",
+                                                              image.shape[2],
+                                                              image.shape[1]))
+        if len(bboxes_list) == 0:
+            return None, None, None
+        return image, torch.tensor(bboxes_list), labels
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
@@ -108,7 +124,7 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     :param batch_size:
     :return:
     """
-    random_seed = 40
+    random_seed = None
     rng = np.random.default_rng(random_seed)
 
     dataset_size = len(dataset)
@@ -145,29 +161,36 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 # mean and std from the ImageNet dataset
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-train_transforms = v2.Compose([
-    v2.ToImage(),
-    v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
-    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
-    v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
-    v2.RandomIoUCrop(),
-    v2.SanitizeBoundingBoxes(),
-    v2.RandomResizedCrop(size=(300, 300), antialias=True),
-    #v2.Resize((300, 300)),
-    v2.ClampBoundingBoxes(),
-    v2.SanitizeBoundingBoxes(),
-    #v2.ConvertImageDtype(torch.float),
-])
 
-validation_transforms = v2.Compose([
-    v2.ToImage(),
-    v2.ToDtype(torch.float, scale=True),
-    v2.Pad([0, 88, 0, 88], fill=0),
-    v2.Normalize(mean, std),
-    v2.Resize((300, 300)),
-    v2.SanitizeBoundingBoxes(),
-    v2.ConvertImageDtype(torch.float32),
-])
+transform = A.Compose([
+    A.RandomResizedCrop(height=300, width=300, scale=(0.08, 1.0),
+                        ratio=(0.75, 1.3333333333333333), p=1.0),
+
+    ToTensorV2(),
+], bbox_params=A.BboxParams(format="pascal_voc", label_fields=["class_labels"]))
+# train_transforms = v2.Compose([
+#     v2.ToImage(),
+#     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
+#     #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
+#     v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
+#     v2.RandomIoUCrop(),
+#     v2.SanitizeBoundingBoxes(),
+#     v2.RandomResizedCrop(size=(300, 300), antialias=True),
+#     #v2.Resize((300, 300)),
+#     v2.ClampBoundingBoxes(),
+#     v2.SanitizeBoundingBoxes(),
+#     #v2.ConvertImageDtype(torch.float),
+# ])
+#
+# validation_transforms = v2.Compose([
+#     v2.ToImage(),
+#     v2.ToDtype(torch.float, scale=True),
+#     v2.Pad([0, 88, 0, 88], fill=0),
+#     v2.Normalize(mean, std),
+#     v2.Resize((300, 300)),
+#     v2.SanitizeBoundingBoxes(),
+#     v2.ConvertImageDtype(torch.float32),
+# ])
 
 if __name__ == "__main__":
     DATA_PATH = "../../data/NAPLab-LiDAR"
@@ -180,11 +203,11 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=train_transforms,
+        transform=transform,
     )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader, test_loader = make_loaders(dataset,
-                                                                batch_size=1,
+                                                                batch_size=32,
                                                                 validation_split=.2)
     #for i, (image, boxes, labels) in enumerate(train_loader):
     #    print(i)

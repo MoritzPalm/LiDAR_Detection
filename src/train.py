@@ -13,7 +13,7 @@ from lightning.pytorch.callbacks import (
 from lightning.pytorch.loggers import WandbLogger
 #from codecarbon import track_emissions
 
-from models.dataset import LiDARDataset, make_loaders, train_transforms
+from models.dataset import LiDARDataset, make_loaders, transform
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
@@ -30,7 +30,7 @@ def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
         "../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=train_transforms,
+        transform=transform,
     )
     (train_loader,
      validation_loader,
