@@ -34,6 +34,9 @@ def collate_fn(batch):
     classes = []
 
     for b in batch:
+        if b[0] is None or b[1] is None or b[2] is None: # only checking labels or boxes should suffice
+            # this can lead to huge problems if no boxes are present in the batch
+            continue
         images.append(b[0])
         classes.append(b[1])
         bboxes.append(b[2])
@@ -54,7 +57,7 @@ class LiDARDataset(Dataset):
         return len(os.listdir(self.labels_dir)) - 1
 
     def __getitem__(self, idx: int) -> (
-            tuple)[torch.Tensor, torch.Tensor, tv_tensors.BoundingBoxes]:
+            tuple)[torch.Tensor | None, torch.Tensor | None, tv_tensors.BoundingBoxes | None]:
         """
 
         :param idx:
@@ -93,6 +96,8 @@ class LiDARDataset(Dataset):
             image, bbox_label_dict = self.transform(image, bbox_label_dict)
         labels = bbox_label_dict.get("labels")
         voc_bboxes = bbox_label_dict.get("boxes")
+        if not voc_bboxes.numel():
+            return None, None, None
         albu_bboxes = voc_to_albu(voc_bboxes, (image.shape[2], image.shape[1]))
         return image, albu_bboxes, labels
 
@@ -145,17 +150,17 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
 # mean and std from the ImageNet dataset
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-train_transforms = v2.Compose([
+transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
     #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
-    #v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
-    #v2.RandomIoUCrop(),
-    #v2.SanitizeBoundingBoxes(),
-    #v2.RandomResizedCrop(size=(300, 300), antialias=True),
-    #v2.Resize((300, 300)),
-    #v2.ClampBoundingBoxes(),
-    #v2.SanitizeBoundingBoxes(),
+    v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
+    v2.RandomIoUCrop(),
+    v2.SanitizeBoundingBoxes(),
+    v2.RandomResizedCrop(size=(300, 300), antialias=True),
+    v2.Resize((300, 300)),
+    v2.ClampBoundingBoxes(),
+    v2.SanitizeBoundingBoxes(),
     #v2.ConvertImageDtype(torch.float),
 ])
 

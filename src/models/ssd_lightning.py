@@ -16,7 +16,7 @@ class SSDLightning(pl.LightningModule):
 
         self.model = SSD300(self.config.num_classes)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
-        self.mean_average_precision = MeanAveragePrecision(box_format="cxcywh",
+        self.mean_average_precision = MeanAveragePrecision(box_format="cxcywh",# this wants absolute boundary coords
                                                            iou_type="bbox",
                                                            class_metrics=True,
                                                            backend="faster_coco_eval")

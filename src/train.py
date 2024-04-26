@@ -11,9 +11,9 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
-#from codecarbon import track_emissions
+from codecarbon import track_emissions
 
-from models.dataset import LiDARDataset, make_loaders, train_transforms
+from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
@@ -25,12 +25,12 @@ torch.set_float32_matmul_precision("medium")
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-#@track_emissions(country_iso_code="NOR")
+@track_emissions(country_iso_code="NOR")
 def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
         "../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=train_transforms,
+        transform=transforms,
     )
     (train_loader,
      validation_loader,
@@ -45,7 +45,7 @@ def train():
     else:
         model = SSD(config)
 
-    trainer = pl.Trainer(accelerator="auto",
+    trainer = pl.Trainer(accelerator="auto", fast_dev_run=True,
                          devices=[3],
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
