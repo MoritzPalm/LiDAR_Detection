@@ -45,7 +45,7 @@ def train():
     else:
         model = SSD(config)
 
-    trainer = pl.Trainer(accelerator="auto", fast_dev_run=True,
+    trainer = pl.Trainer(accelerator="auto", fast_dev_run=False,
                          devices=[3],
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
@@ -71,7 +71,7 @@ def train():
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
-    # trainer.test(model=model, dataloaders=test_loader)
+    trainer.test(model=model, dataloaders=test_loader)
 
 
 if __name__ == "__main__":

@@ -185,7 +185,7 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=train_transforms,
+        transform=transforms,
     )
     print(f"dataset: {len(dataset)}")
     train_loader, validation_loader, test_loader = make_loaders(dataset,
