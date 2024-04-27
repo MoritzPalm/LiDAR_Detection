@@ -13,7 +13,7 @@ from lightning.pytorch.callbacks import (
 )
 from lightning.pytorch.loggers import WandbLogger
 
-from models.dataset import LiDARDataset, make_loaders, transforms
+from models.dataset import LiDARDataset, make_loaders, transforms, validation_transforms
 from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
@@ -29,14 +29,15 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 def train():
     dataset = LiDARDataset(
         "../data/NAPLab-LiDAR/images",
-        "../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=transforms,
+        "../data/NAPLab-LiDAR/labels_yolo_v1.1"
     )
     (train_loader,
      validation_loader,
-     test_loader) = make_loaders(dataset,
+     test_loader) = make_loaders(dataset, train_transform=transforms,
+                                 val_test_transform=validation_transforms,
                                  batch_size=config.batch_size,
-                                 validation_split=1-config.train_split_ratio)
+                                 validation_split=1-config.train_split_ratio,
+                                 test_split=1-config.train_split_ratio)
 
     if config.checkpoint_path:
         model = SSD.load_from_checkpoint(checkpoint_path=config.checkpoint_path,
