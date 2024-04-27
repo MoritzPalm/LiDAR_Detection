@@ -1,7 +1,7 @@
 import random
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 import torch
 

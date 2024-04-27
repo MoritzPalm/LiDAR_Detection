@@ -1,10 +1,9 @@
 import lightning.pytorch as pl
 import torch
-from torch import optim
-from torch.optim.lr_scheduler import MultiStepLR, ReduceLROnPlateau
-from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from pybboxes import BoundingBox
 from albumentations import denormalize_bbox
+from torch import optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from models.multiboxloss import MultiBoxLoss
 from models.ssd import SSD300
@@ -159,5 +158,5 @@ class SSDLightning(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.config.max_lr)
         scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=5, verbose=True)
-        return {'optimizer': optimizer, 'lr_scheduler': scheduler,
+        return {"optimizer": optimizer, "lr_scheduler": scheduler,
                 "monitor": "train_loss"}

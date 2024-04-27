@@ -13,7 +13,8 @@ class MultiBoxLoss(nn.Module):
     (2) a confidence loss for the predicted class scores.
     """
 
-    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device="cpu"):
+    def __init__(self, priors_cxcy, threshold=0.5,
+                 neg_pos_ratio=3, alpha=1., device="cpu"):
         super(MultiBoxLoss, self).__init__()
         self.device = device
         self.priors_cxcy = priors_cxcy.to(self.device)

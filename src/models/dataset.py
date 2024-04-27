@@ -1,22 +1,19 @@
 import os
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
-from torch.utils.data.sampler import SubsetRandomSampler
+from pybboxes import BoundingBox
+from torch.utils.data import Dataset, Subset
 from torchvision import tv_tensors
 from torchvision.transforms import v2
-from torchvision.utils import draw_bounding_boxes
-import torchvision
-import matplotlib.pyplot as plt
-from pybboxes import BoundingBox
 
 from utils import get_relative_coords, read_labels, voc_to_albu
 from visualization.visualize_img_boxes import visualize_dataset
 
-# this prevents erros with too many open files
+# this prevents errors with too many open files
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 
@@ -34,7 +31,8 @@ def collate_fn(batch):
     classes = []
 
     for b in batch:
-        if b[0] is None or b[1] is None or b[2] is None: # only checking labels or boxes should suffice
+        if b[0] is None or b[1] is None or b[
+            2] is None:  # only checking labels or boxes should suffice
             # this can lead to huge problems if no boxes are present in the batch
             continue
         images.append(b[0])
@@ -57,7 +55,8 @@ class LiDARDataset(Dataset):
         return len(os.listdir(self.labels_dir)) - 1
 
     def __getitem__(self, idx: int) -> (
-            tuple)[torch.Tensor | None, torch.Tensor | None, tv_tensors.BoundingBoxes | None]:
+            tuple)[
+        torch.Tensor | None, torch.Tensor | None, tv_tensors.BoundingBoxes | None]:
         """
 
         :param idx:
@@ -102,47 +101,59 @@ class LiDARDataset(Dataset):
         return image, albu_bboxes, labels
 
 
-def make_loaders(dataset, batch_size=64, validation_split=.2) \
+def make_loaders(full_dataset, train_transform=None, val_test_transform=None,
+                 batch_size=64, validation_split=.1, test_split=.2, ) \
         -> tuple[torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader]:
+                 torch.utils.data.DataLoader,
+                 torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
-    :param validation_split: percentage of the dataset to use for validation and testing
-    :param dataset:
+    :param val_test_transform:
+    :param train_transform:
+    :param test_split:
+    :param validation_split: percentage of the dataset to use for validation
+    :param full_dataset:
     :param batch_size:
     :return:
     """
     random_seed = None
     rng = np.random.default_rng(random_seed)
 
-    dataset_size = len(dataset)
-    indices = list(range(dataset_size))
-
-    split = int(np.floor(validation_split * dataset_size))
+    total_size = len(dataset)
+    indices = np.arange(total_size)
     rng.shuffle(indices)
-    train_indices, val_indices = indices[split:], indices[:split]
-    split = int(np.floor(validation_split * len(train_indices)))
-    rng.shuffle(train_indices)
-    train_indices, test_indices = train_indices[split:], train_indices[:split]
 
-    train_sampler = SubsetRandomSampler(train_indices)
-    valid_sampler = SubsetRandomSampler(val_indices)
-    test_sampler = SubsetRandomSampler(test_indices)
+    val_size = int(np.floor(validation_split * total_size))
+    test_size = int(np.floor(test_split * total_size))
+    train_size = total_size - val_size - test_size
+
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size:train_size + val_size]
+    test_indices = indices[train_size + val_size:]
+
+    train_dataset = Subset(full_dataset, train_indices)
+    val_dataset = Subset(full_dataset, val_indices)
+    test_dataset = Subset(full_dataset, test_indices)
+
+    if train_transform:
+        train_dataset.dataset.transform = train_transform
+    if val_test_transform:
+        val_dataset.dataset.transform = val_test_transform
+        test_dataset.dataset.transform = val_test_transform
 
     num_workers = 0
 
     train_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size,
-        sampler=train_sampler, num_workers=num_workers,
+        train_dataset, batch_size=batch_size,
+        num_workers=num_workers, shuffle=True,
         collate_fn=collate_fn, drop_last=True)
     validation_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size,
-        sampler=valid_sampler, num_workers=num_workers,
+        val_dataset, batch_size=batch_size,
+        num_workers=num_workers, shuffle=False,
         collate_fn=collate_fn, drop_last=True)
     test_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=batch_size,
-        sampler=test_sampler, num_workers=num_workers,
+        test_dataset, batch_size=batch_size,
+        num_workers=num_workers, shuffle=False,
         collate_fn=collate_fn, drop_last=True)
     return train_loader, validation_loader, test_loader
 
@@ -153,7 +164,7 @@ std = [0.229, 0.224, 0.225]
 transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
-    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get a total size of 300
+    #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get total size of 300
     v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
     v2.RandomIoUCrop(),
     v2.SanitizeBoundingBoxes(),
@@ -161,15 +172,16 @@ transforms = v2.Compose([
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),
     v2.SanitizeBoundingBoxes(),
-    #v2.ConvertImageDtype(torch.float),
 ])
 
 validation_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),
-    v2.Pad([0, 88, 0, 88], fill=0),
+    #v2.Pad([0, 88, 0, 88], fill=0),
     v2.Normalize(mean, std),
+    v2.RandomResizedCrop(size=(300, 300), antialias=True),
     v2.Resize((300, 300)),
+    v2.ClampBoundingBoxes(),
     v2.SanitizeBoundingBoxes(),
     v2.ConvertImageDtype(torch.float32),
 ])
@@ -188,9 +200,12 @@ if __name__ == "__main__":
         transform=transforms,
     )
     print(f"dataset: {len(dataset)}")
-    train_loader, validation_loader, test_loader = make_loaders(dataset,
-                                                                batch_size=1,
-                                                                validation_split=.2)
+    (train_loader,
+     validation_loader,
+     test_loader) = make_loaders(dataset, train_transform=transforms,
+                                 val_test_transform=validation_transforms,
+                                 batch_size=1,
+                                 validation_split=.2)
     #for i, (image, boxes, labels) in enumerate(train_loader):
     #    print(i)
     #print(f"{dataset.oob_counter=}")

@@ -4,6 +4,7 @@ import lightning.pytorch as pl
 import munch
 import torch
 import yaml
+from codecarbon import track_emissions
 from lightning.pytorch.accelerators import find_usable_cuda_devices
 from lightning.pytorch.callbacks import (
     EarlyStopping,
@@ -11,7 +12,6 @@ from lightning.pytorch.callbacks import (
     ModelCheckpoint,
 )
 from lightning.pytorch.loggers import WandbLogger
-from codecarbon import track_emissions
 
 from models.dataset import LiDARDataset, make_loaders, transforms
 from models.ssd_lightning import SSDLightning as SSD
@@ -22,7 +22,7 @@ if torch.cuda.is_available():
 else:
     devices = 1
 torch.set_float32_matmul_precision("medium")
-torch.multiprocessing.set_sharing_strategy('file_system')
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 
 @track_emissions(country_iso_code="NOR")
@@ -71,6 +71,7 @@ def train():
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
+    print("testing model...")
     trainer.test(model=model, dataloaders=test_loader)
 
 

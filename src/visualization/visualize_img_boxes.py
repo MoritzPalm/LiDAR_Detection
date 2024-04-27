@@ -4,9 +4,9 @@ from pathlib import Path
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import numpy as np
 import PIL.Image as PIL
 import seaborn as sns
-import numpy as np
 import torchvision.tv_tensors
 from torchvision.ops.boxes import box_convert
 
@@ -57,7 +57,7 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
     """
     plt.imshow(img)
     img_height, img_width = img.shape[:2]
-    abs_boxes = box_convert(boxes, in_fmt='xyxy', out_fmt='xyxy') * np.array(
+    abs_boxes = box_convert(boxes, in_fmt="xyxy", out_fmt="xyxy") * np.array(
         [img_width, img_height, img_width, img_height])
     for box, label in zip(abs_boxes, labels):
         rect = patches.Rectangle(
@@ -65,7 +65,7 @@ def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBox
             box[2] - box[0],
             box[3] - box[1],
             linewidth=1,
-            edgecolor='red',  # You can customize the edge color as needed
+            edgecolor="red",  # You can customize the edge color as needed
             facecolor="none",
         )
         plt.gca().add_patch(rect)
