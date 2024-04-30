@@ -179,8 +179,7 @@ transforms = v2.Compose([
 validation_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),
-    #v2.Pad([0, 88, 0, 88], fill=0),
-    v2.Normalize(mean, std),
+    v2.Normalize([0, 0, 0], [1, 1, 1]),
     v2.RandomResizedCrop(size=(300, 300), antialias=True),
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),

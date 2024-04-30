@@ -42,8 +42,8 @@ class MultiBoxLoss(nn.Module):
         """
         predicted_locs = predicted_locs.to(self.device)
         predicted_scores = predicted_scores.to(self.device)
-        boxes = [cxcy_to_xy(b).to(self.device) for b in boxes]
-        labels = [l.to(self.device) for l in labels]
+        #boxes = [cxcy_to_xy(b).to(self.device) for b in boxes]
+        #labels = [l.to(self.device) for l in labels]
 
         batch_size = predicted_locs.size(0)
         n_priors = self.priors_cxcy.size(0)
