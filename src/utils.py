@@ -515,3 +515,20 @@ def expand(image, boxes, filler):
         0)  # (n_objects, 4), n_objects is the no. of objects in this image
 
     return new_image, new_boxes
+
+
+def normalize_voc(image, boxes):
+    """
+    Since percent/fractional coordinates are calculated for the bounding boxes (w.r.t image dimensions) in this process,
+    you may choose to retain them.
+
+    :param image: image, a PIL Image
+    :param boxes: bounding boxes in boundary coordinates, a tensor of dimensions (n_objects, 4)
+    :return: resized image, updated bounding box coordinates (or fractional coordinates, in which case they remain the same)
+    """
+    # Resize image
+
+    # Resize bounding boxes
+    old_dims = torch.FloatTensor([image.width, image.height, image.width, image.height]).unsqueeze(0)
+    new_boxes = boxes / old_dims  # percent coordinates
+    return new_boxes

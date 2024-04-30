@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, Subset
 from torchvision import tv_tensors
 from torchvision.transforms import v2
 
-from utils import get_relative_coords, read_labels, voc_to_albu
+from utils import get_relative_coords, read_labels, voc_to_albu, normalize_voc
 from visualization.visualize_img_boxes import visualize_dataset
 
 # this prevents errors with too many open files
@@ -31,8 +31,8 @@ def collate_fn(batch):
     classes = []
 
     for b in batch:
-        if b[0] is None or b[1] is None or b[
-            2] is None:  # only checking labels or boxes should suffice
+        # only checking labels or boxes should suffice
+        if b[0] is None or b[1] is None or b[2] is None:
             # this can lead to huge problems if no boxes are present in the batch
             continue
         images.append(b[0])
@@ -79,6 +79,7 @@ class LiDARDataset(Dataset):
             if yolo_box.is_oob:
                 self.oob_counter += 1
             voc_box = yolo_box.to_voc(return_values=True)
+            voc_box = [x - 1 for x in voc_box]  # subtracting 1 to match the 0-based index?? maybe works, probably doesnt
             voc_boxes.append(voc_box)
             labels.append(class_)
         labels = torch.tensor(labels, dtype=torch.long)
@@ -97,15 +98,16 @@ class LiDARDataset(Dataset):
         voc_bboxes = bbox_label_dict.get("boxes")
         if not voc_bboxes.numel():
             return None, None, None
-        albu_bboxes = voc_to_albu(voc_bboxes, (image.shape[2], image.shape[1]))
-        return image, albu_bboxes, labels
+        norm_boxes = normalize_voc(image, voc_bboxes)
+        #albu_bboxes = voc_to_albu(voc_bboxes, (image.shape[2], image.shape[1]))
+        return image, norm_boxes, labels
 
 
 def make_loaders(full_dataset, train_transform=None, val_test_transform=None,
                  batch_size=64, validation_split=.1, test_split=.2, ) \
         -> tuple[torch.utils.data.DataLoader,
-                 torch.utils.data.DataLoader,
-                 torch.utils.data.DataLoader]:
+        torch.utils.data.DataLoader,
+        torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
     :param val_test_transform:
@@ -119,7 +121,7 @@ def make_loaders(full_dataset, train_transform=None, val_test_transform=None,
     random_seed = None
     rng = np.random.default_rng(random_seed)
 
-    total_size = len(dataset)
+    total_size = len(full_dataset)
     indices = np.arange(total_size)
     rng.shuffle(indices)
 
