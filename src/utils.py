@@ -529,6 +529,6 @@ def normalize_voc(image, boxes):
     # Resize image
 
     # Resize bounding boxes
-    old_dims = torch.FloatTensor([image.size[1], image.size[0], image.size[1], image.size[0]]).unsqueeze(0)
+    old_dims = torch.FloatTensor([image.shape[2], image.shape[1], image.shape[2], image.shape[1]]).unsqueeze(0)
     new_boxes = boxes / old_dims  # percent coordinates
     return new_boxes
