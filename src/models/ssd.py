@@ -597,7 +597,7 @@ class SSD300(nn.Module):
                 # of which predicted boxes to suppress
                 # 1 implies suppress, 0 implies don't suppress
                 suppress = torch.zeros((n_above_min_score),
-                                       dtype=torch.bool).to(self.priors_cxcy.device)
+                                       dtype=torch.uint8).to(self.priors_cxcy.device)
                 # (n_qualified)
 
                 # Consider each box in order of decreasing scores
