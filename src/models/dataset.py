@@ -14,6 +14,9 @@ from src.utils import get_relative_coords, read_labels
 # TODO: check if migration from torchvision to
 #  albumentations for bounding box transformations is necessary
 
+# this prevents erros with too many open files
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 
 def collate_fn(batch):
     """
@@ -45,9 +48,10 @@ class LiDARDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(os.listdir(self.img_dir)) - 1
+        return len(os.listdir(self.labels_dir)) - 1
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> (
+            tuple)[torch.Tensor, torch.Tensor, tv_tensors.BoundingBoxes]:
         idx = str(idx).zfill(6)  # filling with zeros to match the 6 digit file name
         img_path = os.path.join(self.img_dir, f"frame_{idx}.PNG")
         label_path = os.path.join(self.labels_dir, f"frame_{idx}.txt")
@@ -59,6 +63,7 @@ class LiDARDataset(Dataset):
             class_, x, y, w, h = get_relative_coords(label)
             rel_labels.append([x, y, w, h])
             classes.append(class_)
+        classes = torch.LongTensor(classes)
         bboxes = tv_tensors.BoundingBoxes(
             rel_labels,
             format=tv_tensors.BoundingBoxFormat.XYWH,
@@ -70,10 +75,12 @@ class LiDARDataset(Dataset):
 
 
 def make_loaders(dataset, batch_size=64, validation_split=.2) \
-        -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
+        -> tuple[torch.utils.data.DataLoader,
+                 torch.utils.data.DataLoader,
+                 torch.utils.data.DataLoader]:
     """
     Returns a DataLoader for the given dataset
-    :param validation_split:
+    :param validation_split: percentage of the dataset to use for validation and testing
     :param dataset:
     :param batch_size:
     :return:
@@ -87,18 +94,24 @@ def make_loaders(dataset, batch_size=64, validation_split=.2) \
     split = int(np.floor(validation_split * dataset_size))
     rng.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
-    # TODO: test loader
+    split = int(np.floor(validation_split * len(train_indices)))
+    rng.shuffle(train_indices)
+    train_indices, test_indices = train_indices[split:], train_indices[:split]
 
     train_sampler = SubsetRandomSampler(train_indices)
     valid_sampler = SubsetRandomSampler(val_indices)
+    test_sampler = SubsetRandomSampler(test_indices)
 
     train_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, sampler=train_sampler,
-        num_workers=os.cpu_count(), collate_fn=collate_fn)
+        num_workers=0, collate_fn=collate_fn)
     validation_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size,
-        sampler=valid_sampler, num_workers=os.cpu_count(), collate_fn=collate_fn)
-    return train_loader, validation_loader
+        sampler=valid_sampler, num_workers=0, collate_fn=collate_fn)
+    test_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size,
+        sampler=test_sampler, num_workers=0, collate_fn=collate_fn)
+    return train_loader, validation_loader, test_loader
 
 
 transforms = v2.Compose([
@@ -107,7 +120,6 @@ transforms = v2.Compose([
     v2.Resize((300, 300)),
     v2.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
-
 
 if __name__ == "__main__":
     DATA_PATH = "../../data/NAPLab-LiDAR"
@@ -122,8 +134,16 @@ if __name__ == "__main__":
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
     )
-    train_loader, validation_loader = make_loaders(dataset,
-                                                   batch_size=9999,
-                                                   validation_split=.2)
-    img, classes, bboxes = next(iter(train_loader))
-    print(f"img: {img.shape}, classes: {classes}, bboxes: {bboxes}")
+    print(f"dataset: {len(dataset)}")
+    train_loader, validation_loader, test_loader = make_loaders(dataset,
+                                                                batch_size=1,
+                                                                validation_split=.2)
+    imgs_list = []
+    classes_list = []
+    bboxes_list = []
+    for i, (img, classes, bboxes) in enumerate(train_loader):
+        imgs_list.extend(img)
+        classes_list.extend(classes)
+        bboxes_list.extend(bboxes)
+    print(f"img: {len(imgs_list)}, classes: {len(classes_list)}, "
+          f"bboxes: {len(bboxes_list)}")

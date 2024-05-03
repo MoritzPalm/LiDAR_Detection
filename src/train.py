@@ -1,20 +1,26 @@
 from pathlib import Path
 
+import lightning.pytorch as pl
 import munch
-import pytorch_lightning as l
+import torch
 import yaml
-from pytorch_lightning.callbacks import (
+from lightning.pytorch.accelerators import find_usable_cuda_devices
+from lightning.pytorch.callbacks import (
     EarlyStopping,
     LearningRateMonitor,
     ModelCheckpoint,
 )
-from pytorch_lightning.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger
 
 from models.dataset import LiDARDataset, make_loaders, transforms
-from models.ssd_lightning import SSD
+from models.ssd_lightning import SSDLightning as SSD
 
 config = munch.munchify(yaml.load(open("../config.yaml"), Loader=yaml.FullLoader))
-
+if torch.cuda.is_available():
+    devices = find_usable_cuda_devices(config.devices)
+else:
+    devices = 1
+torch.set_float32_matmul_precision("medium")
 
 if __name__ == "__main__":
     dataset = LiDARDataset(
@@ -22,9 +28,11 @@ if __name__ == "__main__":
         "../data/NAPLab-LiDAR/labels_yolo_v1.1",
         transform=transforms,
     )
-    train_loader, validation_loader = make_loaders(dataset,
-                                                   batch_size=config.batch_size,
-                                                   validation_split=.2)
+    (train_loader,
+     validation_loader,
+     test_loader) = make_loaders(dataset,
+                                 batch_size=config.batch_size,
+                                 validation_split=.2)
 
     if config.checkpoint_path:
         model = SSD.load_from_checkpoint(checkpoint_path=config.checkpoint_path,
@@ -33,29 +41,30 @@ if __name__ == "__main__":
     else:
         model = SSD(config)
 
-    trainer = l.Trainer(devices=config.devices,
-                        max_epochs=config.max_epochs,
-                        check_val_every_n_epoch=config.check_val_every_n_epoch,
-                        enable_progress_bar=config.enable_progress_bar,
-                        precision="bf16-mixed",
-                        # deterministic=True,
-                        logger=WandbLogger(project=config.wandb_project,
-                                           name=config.wandb_experiment_name,
-                                           config=config),
-                        callbacks=[
-                            EarlyStopping(monitor="val/acc",
-                                          patience=config.early_stopping_patience,
-                                          mode="max",
-                                          verbose=True),
-                            LearningRateMonitor(logging_interval="step"),
-                            ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
-                                                         config.wandb_project,
-                                                         config.wandb_experiment_name),
-                                            filename="best_model:epoch={epoch:02d}-val_acc={val/acc:.4f}",
-                                            auto_insert_metric_name=False,
-                                            save_weights_only=True,
-                                            save_top_k=1),
-                        ])
+    trainer = pl.Trainer(accelerator="auto",
+                         devices=devices,
+                         max_epochs=config.max_epochs,
+                         check_val_every_n_epoch=config.check_val_every_n_epoch,
+                         enable_progress_bar=config.enable_progress_bar,
+                         precision="bf16-mixed",
+                         # deterministic=True,
+                         logger=WandbLogger(project=config.wandb_project,
+                                            name=config.wandb_experiment_name,
+                                            config=config),
+                         callbacks=[
+                             EarlyStopping(monitor="val_loss",
+                                           patience=config.early_stopping_patience,
+                                           mode="min",
+                                           verbose=True),
+                             LearningRateMonitor(logging_interval="step"),
+                             ModelCheckpoint(dirpath=Path(config.checkpoint_folder,
+                                                          config.wandb_experiment_name),
+                                             filename="best_model-epoch={epoch:02d}-val_acc={val/acc:.4f}",
+                                             auto_insert_metric_name=False,
+                                             save_weights_only=True,
+                                             save_top_k=1),
+                         ])
     trainer.fit(model=model,
                 train_dataloaders=train_loader,
                 val_dataloaders=validation_loader)
+    # trainer.test(model=model, dataloaders=test_loader)

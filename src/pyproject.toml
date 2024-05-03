@@ -14,16 +14,6 @@ build-backend = "setuptools.build_meta"
 [project.urls]
 source = "https://github.com/MoritzPalm/LiDAR_Detection"
 
-[tool.ruff.lint]
-# Enable flake8-bugbear (`B`) rules, in addition to the defaults.
-select = ["E", "W", "F", "B", "N", "I", "A",
-    "ICN", "INP", "Q", "PD", "C", "R", "NPY", "RUF"]
-
-[tool.ruff.format]
-#Use single quotes for non-triple-quoted strings.
-quote-style = "single"
-docstring-code-format = true
-
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
@@ -63,3 +53,13 @@ indent-width = 4
 target-version = "py38"
 
 extend-include = ["*.ipynb"]
+
+[tool.ruff.format]
+#Use single quotes for non-triple-quoted strings.
+quote-style = "double"
+docstring-code-format = true
+
+[tool.ruff.lint]
+# Enable flake8-bugbear (`B`) rules, in addition to the defaults.
+select = ["E", "W", "F", "B", "N", "I", "A",
+    "ICN", "INP", "Q", "PD", "C", "R", "NPY", "RUF"]
