@@ -71,9 +71,6 @@ class SSDLightning(pl.LightningModule):
                    for bboxes, classes in zip(bboxes, classes)]
         return loss
 
-    def on_validation_epoch_start(self) -> None:
-        self.mean_average_precision.reset()
-
     def on_validation_epoch_end(self):
         self.true_difficulties.extend([torch.zeros(len(box), dtype=torch.bool,
                                                    device=self.device)
@@ -105,8 +102,6 @@ class SSDLightning(pl.LightningModule):
         self.log("inference_time", self.starter.elapsed_time(self.ender) / 1000,
                  on_step=True, on_epoch=False, prog_bar=False)
         # convert detected boxes to absolute coordinates
-        #loss = self.compute_loss(classes_pred, bboxes_pred, bboxes, classes)
-        #self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         abs_det_bboxes_batch = denormalize_bbox(det_boxes_batch,
                                                 images.shape[3],
                                                 images.shape[2])
