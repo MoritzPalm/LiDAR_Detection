@@ -1,3 +1,5 @@
+# code from https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection
+
 from math import sqrt
 
 import torch

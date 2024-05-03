@@ -1,3 +1,5 @@
+# some functions from https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection
+
 import random
 from enum import Enum
 from pathlib import Path

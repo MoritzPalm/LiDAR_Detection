@@ -1,3 +1,5 @@
+# code mainly from https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection
+
 import torch
 from dataset import validation_transforms
 from PIL import Image, ImageDraw, ImageFont
