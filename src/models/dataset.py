@@ -170,7 +170,7 @@ train_transforms = v2.Compose([
     #v2.RandomResizedCrop(size=(300, 300), antialias=True),
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),
-    v2.SanitizeBoundingBoxes(min_size=0.5),
+    v2.SanitizeBoundingBoxes(),
     v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
 ])
 
@@ -181,7 +181,7 @@ validation_transforms = v2.Compose([
     #v2.RandomResizedCrop(size=(300, 300), antialias=True),
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),
-    v2.SanitizeBoundingBoxes(min_size=0.5),
+    v2.SanitizeBoundingBoxes(),
     v2.Normalize([0, 0, 0], [1, 1, 1]),
 ])
 
