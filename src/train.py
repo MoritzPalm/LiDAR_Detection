@@ -31,8 +31,10 @@ def train():
     label_path = "../data/NAPLab-LiDAR/labels_yolo_v1.1"
     (train_loader,
      validation_loader,
-     test_loader) = make_loaders(image_path, label_path, train_transform=train_transforms,
+     test_loader) = make_loaders(image_path, label_path,
+                                 train_transform=train_transforms,
                                  val_transform=validation_transforms,
+                                 test_transform=validation_transforms,
                                  batch_size=config.batch_size,
                                  validation_split=1-config.train_split_ratio,
                                  test_split=1-config.train_split_ratio)
@@ -45,7 +47,7 @@ def train():
         model = SSD(config)
 
     trainer = pl.Trainer(accelerator="auto", fast_dev_run=False,
-                         devices=[3],
+                         devices=[1],
                          max_epochs=config.max_epochs,
                          check_val_every_n_epoch=config.check_val_every_n_epoch,
                          enable_progress_bar=config.enable_progress_bar,

@@ -25,6 +25,8 @@ class SSDLightning(pl.LightningModule):
                                                                 iou_type="bbox",
                                                                 class_metrics=True,
                                                                 backend="pycocotools")
+        self.starter, self.ender = torch.cuda.Event(
+            enable_timing=True), torch.cuda.Event(enable_timing=True)
         self.det_boxes = []
         self.det_labels = []
         self.det_scores = []
@@ -102,14 +104,20 @@ class SSDLightning(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         images, bboxes, classes = batch
+        self.starter.record()
         bboxes_pred, classes_pred = self.model(images)
-        loss = self.compute_loss(classes_pred, bboxes_pred, bboxes, classes)
-        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+
         det_boxes_batch, det_labels_batch, det_scores_batch = self.model.detect_objects(
             bboxes_pred, classes_pred,
             min_score=0.01, max_overlap=0.45,
             top_k=200)
+        self.ender.record()
+        torch.cuda.synchronize()
+        self.log("inference_time", self.starter.elapsed_time(self.ender) / 1000,
+                 on_step=True, on_epoch=False, prog_bar=False)
         # convert detected boxes to absolute coordinates
+        #loss = self.compute_loss(classes_pred, bboxes_pred, bboxes, classes)
+        #self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         abs_det_bboxes_batch = denormalize_bbox(det_boxes_batch,
                                                 images.shape[3],
                                                 images.shape[2])
@@ -128,6 +136,7 @@ class SSDLightning(pl.LightningModule):
         targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
         self.mean_average_precision_test.update(preds=preds, target=targets)
+
 
     def on_test_epoch_end(self) -> None:
         test_metrics = self.mean_average_precision_test.compute()
