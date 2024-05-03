@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from PIL import Image
 from pybboxes import BoundingBox
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset, Subset, DataLoader
 from torchvision import tv_tensors
 from torchvision.transforms import v2
 
@@ -103,27 +103,26 @@ class LiDARDataset(Dataset):
         return image, norm_boxes, labels
 
 
-def make_loaders(full_dataset, train_transform=None, val_test_transform=None,
-                 batch_size=64, validation_split=.1, test_split=.2, ) \
-        -> tuple[torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader,
-        torch.utils.data.DataLoader]:
+def make_loaders(data_path, label_path, train_transform=None,
+                 val_transform=None, test_transform=None,
+                 batch_size=64, validation_split=0.1, test_split=0.2):
     """
-    Returns a DataLoader for the given dataset
-    :param val_test_transform:
+    Splits the dataset into train, validation and test sets
+    :param data_path:
+    :param label_path:
     :param train_transform:
-    :param test_split:
-    :param validation_split: percentage of the dataset to use for validation
-    :param full_dataset:
+    :param val_transform:
+    :param test_transform:
     :param batch_size:
+    :param validation_split:
+    :param test_split:
     :return:
     """
-    random_seed = None
-    rng = np.random.default_rng(random_seed)
+    full_dataset = LiDARDataset(data_path, label_path)  # No transform yet
 
     total_size = len(full_dataset)
     indices = np.arange(total_size)
-    rng.shuffle(indices)
+    np.random.shuffle(indices)
 
     val_size = int(np.floor(validation_split * total_size))
     test_size = int(np.floor(test_split * total_size))
@@ -137,33 +136,29 @@ def make_loaders(full_dataset, train_transform=None, val_test_transform=None,
     val_dataset = Subset(full_dataset, val_indices)
     test_dataset = Subset(full_dataset, test_indices)
 
-    if train_transform:
-        train_dataset.dataset.transform = train_transform
-    if val_test_transform:
-        val_dataset.dataset.transform = val_test_transform
-        test_dataset.dataset.transform = val_test_transform
+    train_dataset.dataset = LiDARDataset(data_path, label_path, train_transform)
+    val_dataset.dataset = LiDARDataset(data_path, label_path, val_transform)
+    test_dataset.dataset = LiDARDataset(data_path, label_path, test_transform)
 
     num_workers = 0
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size,
-        num_workers=num_workers, shuffle=True,
-        collate_fn=collate_fn, drop_last=True)
-    validation_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size,
-        num_workers=num_workers, shuffle=False,
-        collate_fn=collate_fn, drop_last=True)
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size,
-        num_workers=num_workers, shuffle=False,
-        collate_fn=collate_fn, drop_last=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, drop_last=True, collate_fn=collate_fn)
+    validation_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=num_workers, drop_last=True, collate_fn=collate_fn)
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=num_workers, drop_last=True, collate_fn=collate_fn)
+
     return train_loader, validation_loader, test_loader
 
 
 # mean and std from the ImageNet dataset
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-transforms = v2.Compose([
+train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
     #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get total size of 300
@@ -198,13 +193,14 @@ if __name__ == "__main__":
     dataset = LiDARDataset(
         "../../data/NAPLab-LiDAR/images",
         "../../data/NAPLab-LiDAR/labels_yolo_v1.1",
-        transform=transforms,
+        transform=train_transforms,
     )
     print(f"dataset: {len(dataset)}")
     (train_loader,
      validation_loader,
-     test_loader) = make_loaders(dataset, train_transform=transforms,
-                                 val_test_transform=validation_transforms,
+     test_loader) = make_loaders(IMAGE_PATH, LABEL_PATH, train_transform=train_transforms,
+                                 val_transform=validation_transforms,
+                                 test_transform=validation_transforms,
                                  batch_size=1,
                                  validation_split=.2)
     #for i, (image, boxes, labels) in enumerate(train_loader):

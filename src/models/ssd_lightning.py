@@ -146,6 +146,7 @@ class SSDLightning(pl.LightningModule):
                                                self.true_classes_test,
                                                self.true_difficulties_test, self.device)
         self.log("custom_map_test", custom_map)
+        self.log("custom_APs_test", custom_APs)
         self.det_boxes_test.clear()
         self.det_labels_test.clear()
         self.det_scores_test.clear()
