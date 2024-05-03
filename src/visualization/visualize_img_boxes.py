@@ -4,8 +4,11 @@ from pathlib import Path
 
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-import PIL.Image as Image
+import numpy as np
+import PIL.Image as PIL
 import seaborn as sns
+import torchvision.tv_tensors
+from torchvision.ops.boxes import box_convert
 
 from src.utils import get_absolute_coords, read_labels
 
@@ -21,12 +24,11 @@ color_class_dict = {
 }
 
 
-def visualize_predictions(image_path: Path, labels: list, save: bool):
-    img = Image.open(image_path)
+def visualize_predictions(img: PIL.Image | np.ndarray, labels: list, save: bool):
     plt.imshow(img)
     for label in labels:
-        width = img.size[0]
-        height = img.size[1]
+        width = img.shape[0]
+        height = img.shape[1]
         class_, x, y, w, h = get_absolute_coords(label, width, height)
         class_name = classes(class_).name
         rect = patches.Rectangle(
@@ -41,6 +43,36 @@ def visualize_predictions(image_path: Path, labels: list, save: bool):
     if save:
         plt.savefig("example.png")
     plt.show()
+
+
+def visualize_dataset(img: np.ndarray, boxes: torchvision.tv_tensors.BoundingBoxes,
+                      labels: list, save: bool) -> None:
+    """
+
+    :param img: ndarray of shape (H, W, C)
+    :param boxes: bounding boxes object with absolute coordinates
+    :param labels:
+    :param save:
+    :return:
+    """
+    plt.imshow(img)
+    img_height, img_width = img.shape[:2]
+    abs_boxes = box_convert(boxes, in_fmt="xyxy", out_fmt="xyxy") * np.array(
+        [img_width, img_height, img_width, img_height])
+    for box, label in zip(abs_boxes, labels):
+        rect = patches.Rectangle(
+            (box[0], box[1]),
+            box[2] - box[0],
+            box[3] - box[1],
+            linewidth=1,
+            edgecolor="red",  # You can customize the edge color as needed
+            facecolor="none",
+        )
+        plt.gca().add_patch(rect)
+    if save:
+        plt.savefig("example.png")
+    plt.show()
+
 
 
 # Example usage

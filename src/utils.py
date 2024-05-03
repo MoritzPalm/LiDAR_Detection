@@ -1,6 +1,7 @@
 import random
 from enum import Enum
 from pathlib import Path
+from typing import Tuple
 
 import torch
 
@@ -63,17 +64,91 @@ def get_absolute_coords(label: str, img_width: int, img_height: int) -> tuple:
     where x, y are the top left corner of the rectangle
     """
 
-    class_, x, y, w, h = get_relative_coords(label)
+    class_, rel_x, rel_y, rel_w, rel_h = get_relative_coords(label)
     # scaling all values to the image size
-    x = x * img_width  # this is the center of the rectangle
-    y = y * img_height  # this is the center of the rectangle
-    w = w * img_width
-    h = h * img_height
+    abs_x = rel_x * img_width
+    abs_y = rel_y * img_height
+    abs_w = rel_w * img_width
+    abs_h = rel_h * img_height
 
     # getting the top left corner
-    x = x - w / 2
-    y = y - h / 2
-    return class_, x, y, w, h
+    x = abs_x - abs_w / 2
+    y = abs_y - abs_h / 2
+    return class_, x, y, abs_w, abs_h
+
+
+def get_rel_from_abs(x: float, y: float, w: float, h: float,
+                     img_width: int, img_height: int) -> tuple:
+    """
+    Get the relative coordinates of the bounding box
+    :param x: x coordinate of the top left corner
+    :param y: y coordinate of the top left corner
+    :param w: width of the rectangle
+    :param h: height of the rectangle
+    :param img_width: width of the image in pixels
+    :param img_height: height of the image in pixels
+    :return: list with elements [x, y, w, h]
+    where x, y are the center of the rectangle
+    """
+    rel_x = (x + w / 2) / img_width
+    rel_y = (y + h / 2) / img_height
+    rel_w = w / img_width
+    rel_h = h / img_height
+    return rel_x, rel_y, rel_w, rel_h
+
+
+def voc_to_albu(boxes: torch.Tensor, img_shape: Tuple[int, int]) -> torch.Tensor:
+    """
+    Convert bounding boxes from VOC format (absolute xyxy) to Albumentations format (relative xyxy).
+    :param boxes: Tensor of shape (n_boxes, 4) representing the bounding boxes in VOC format.
+    :param img_shape: Tuple (img_width, img_height) representing the shape of the image.
+    :return: Tensor of shape (n_boxes, 4) representing the bounding boxes in Albumentations format.
+    """
+    if len(img_shape) != 2:
+        raise ValueError("img_shape must be a tuple of length 2.")
+
+    img_width, img_height = img_shape
+
+    if img_width <= 0 or img_height <= 0:
+        raise ValueError("Image dimensions must be positive.")
+
+    albu_boxes = boxes.clone().float()  # Create a copy of the input tensor to avoid modifying the original
+
+    albu_boxes[:, 0] /= img_width  # Convert x_min to relative
+    albu_boxes[:, 1] /= img_height  # Convert y_min to relative
+    albu_boxes[:, 2] /= img_width  # Convert x_max to relative
+    albu_boxes[:, 3] /= img_height  # Convert y_max to relative
+
+    if (albu_boxes[:, 2:] < albu_boxes[:, :2]).any():
+        raise ValueError("Max values must be greater than min values.")
+
+    return albu_boxes
+
+def get_abs_from_rel_batch(rel_boxes: torch.Tensor, img_shape: Tuple[int, int]) -> torch.Tensor:
+    """
+    Get the absolute coordinates of a batch of bounding boxes.
+
+    :param rel_boxes: Tensor of shape (batch_size, 4) representing the relative coordinates of boxes.
+    :param img_shape: Tuple (img_width, img_height) representing the shape of the image.
+    :return: Tensor of shape (batch_size, 4) representing the absolute coordinates of boxes.
+    """
+    abs_boxes = []
+    img_width, img_height = img_shape
+
+    for rel_box in rel_boxes:
+        rel_x, rel_y, rel_w, rel_h = rel_box
+
+        if rel_w < 0 or rel_h < 0:
+            raise ValueError("Width and height must be non-negative.")
+
+        abs_x = rel_x * img_width - rel_w * img_width / 2
+        abs_y = rel_y * img_height - rel_h * img_height / 2
+        abs_w = rel_w * img_width
+        abs_h = rel_h * img_height
+
+        abs_boxes.append((abs_x, abs_y, abs_w, abs_h))
+
+    return torch.tensor(abs_boxes)
 
 
 def decimate(tensor, m):
@@ -99,7 +174,7 @@ def decimate(tensor, m):
 
 
 def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   # noqa: N802
-                  true_difficulties):
+                  true_difficulties, device):
     """
     Calculate the Mean Average Precision (mAP) of detected objects.
 
@@ -118,6 +193,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
     one tensor for each image containing actual objects' labels
     :param true_difficulties: list of tensors,
     one tensor for each image containing actual objects' difficulty (0 or 1)
+    :param device: device on which the tensors are
     :return: list of average precisions for all classes, mean average precision (mAP)
     """
     assert len(det_boxes) == len(det_labels) == len(det_scores) == len(
@@ -132,7 +208,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
     true_images = []
     for i in range(len(true_labels)):
         true_images.extend([i] * true_labels[i].size(0))
-    true_images = torch.LongTensor(true_images)
+    true_images = torch.tensor(true_images, dtype=torch.long, device=device)
     # (n_objects), n_objects is the total no. of objects across all images
     true_boxes = torch.cat(true_boxes, dim=0)  # (n_objects, 4)
     true_labels = torch.cat(true_labels, dim=0)  # (n_objects)
@@ -145,7 +221,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
     det_images = []
     for i in range(len(det_labels)):
         det_images.extend([i] * det_labels[i].size(0))
-    det_images = torch.LongTensor(det_images)  # (n_detections)
+    det_images = torch.tensor(det_images, dtype=torch.long, device=device)  # (n_detections)
     det_boxes = torch.cat(det_boxes, dim=0)  # (n_detections, 4)
     det_labels = torch.cat(det_labels, dim=0)  # (n_detections)
     det_scores = torch.cat(det_scores, dim=0)  # (n_detections)
@@ -162,8 +238,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
         true_class_boxes = true_boxes[true_labels == c]  # (n_class_objects, 4)
         true_class_difficulties = true_difficulties[
             true_labels == c]  # (n_class_objects)
-        n_easy_class_objects = (
-                    1 - true_class_difficulties).sum().item()
+        n_easy_class_objects = (~true_class_difficulties).sum().item()
         # ignore difficult objects
 
         # Keep track of which true objects with this class have already been 'detected'
@@ -215,7 +290,8 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
             # image-level tensors 'object_boxes', 'object_difficulties'
             # In the original class-level tensors
             # 'true_class_boxes', etc., 'ind' corresponds to object with index...
-            original_ind = torch.LongTensor(range(true_class_boxes.size(0)))[
+            original_ind = torch.tensor(range(true_class_boxes.size(0)),
+                                        dtype=torch.long, device=device)[
                 true_class_images == this_image][ind]
             # We need 'original_ind' to update 'true_class_boxes_detected'
 
@@ -253,7 +329,7 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels,   
         # Find the mean of the maximum of the precisions
         # corresponding to recalls above the threshold 't'
         recall_thresholds = torch.arange(start=0, end=1.1, step=.1).tolist()  # (11)
-        precisions = torch.zeros((len(recall_thresholds)), dtype=torch.float)  # (11)
+        precisions = torch.zeros((len(recall_thresholds)), dtype=torch.float, device=device)  # (11)
         for i, t in enumerate(recall_thresholds):
             recalls_above_t = cumul_recall >= t
             if recalls_above_t.any():
@@ -439,3 +515,20 @@ def expand(image, boxes, filler):
         0)  # (n_objects, 4), n_objects is the no. of objects in this image
 
     return new_image, new_boxes
+
+
+def normalize_voc(image, boxes):
+    """
+    Since percent/fractional coordinates are calculated for the bounding boxes (w.r.t image dimensions) in this process,
+    you may choose to retain them.
+
+    :param image: image, a PIL Image
+    :param boxes: bounding boxes in boundary coordinates, a tensor of dimensions (n_objects, 4)
+    :return: resized image, updated bounding box coordinates (or fractional coordinates, in which case they remain the same)
+    """
+    # Resize image
+
+    # Resize bounding boxes
+    old_dims = torch.FloatTensor([image.shape[2], image.shape[1], image.shape[2], image.shape[1]]).unsqueeze(0)
+    new_boxes = boxes / old_dims  # percent coordinates
+    return new_boxes

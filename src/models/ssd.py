@@ -401,11 +401,10 @@ class SSD300(nn.Module):
     auxiliary, and prediction convolutions.
     """
 
-    def __init__(self, n_classes, device):
+    def __init__(self, n_classes):
         super(SSD300, self).__init__()
 
         self.n_classes = n_classes
-        self.device = device
 
         self.base = VGGBase()
         self.aux_convs = AuxiliaryConvolutions()
@@ -598,7 +597,7 @@ class SSD300(nn.Module):
                 # of which predicted boxes to suppress
                 # 1 implies suppress, 0 implies don't suppress
                 suppress = torch.zeros((n_above_min_score),
-                                       dtype=torch.bool).to(self.priors_cxcy.device)
+                                       dtype=torch.uint8).to(self.priors_cxcy.device)
                 # (n_qualified)
 
                 # Consider each box in order of decreasing scores
@@ -619,20 +618,16 @@ class SSD300(nn.Module):
                     suppress[box] = 0
 
                 # Store only unsuppressed boxes for this class
-                image_boxes.append(class_decoded_locs[~suppress])
+                image_boxes.append(class_decoded_locs[1 - suppress])
                 image_labels.append(
-                    torch.tensor((~suppress).sum().item() * [c], dtype=torch.long,
-                                 device=self.priors_cxcy.device))
-                image_scores.append(class_scores[~suppress])
+                    torch.LongTensor((1 - suppress).sum().item() * [c]).to(self.priors_cxcy.device))
+                image_scores.append(class_scores[1 - suppress])
 
             # If no object in any class is found, store a placeholder for 'background'
             if len(image_boxes) == 0:
-                image_boxes.append(torch.tensor([[0., 0., 1., 1.]], dtype=torch.float,
-                                                device=self.priors_cxcy.device))
-                image_labels.append(torch.tensor([0], dtype=torch.long,
-                                                 device=self.priors_cxcy.device))
-                image_scores.append(torch.tensor([0.], dtype=torch.float,
-                                                 device=self.priors_cxcy.device))
+                image_boxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(self.priors_cxcy.device))
+                image_labels.append(torch.LongTensor([0]).to(self.priors_cxcy.device))
+                image_scores.append(torch.FloatTensor([0.]).to(self.priors_cxcy.device))
 
             # Concatenate into single tensors
             image_boxes = torch.cat(image_boxes, dim=0)  # (n_objects, 4)
