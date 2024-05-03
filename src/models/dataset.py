@@ -162,16 +162,16 @@ train_transforms = v2.Compose([
     v2.ToImage(),
     v2.ToDtype(torch.float, scale=True),  # this needs to come before Normalize
     #v2.Pad([0, 88, 0, 88], fill=0),  # padding top and bottom to get total size of 300
-    v2.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+    #v2.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
     v2.RandomHorizontalFlip(0.5),
-    v2.RandomZoomOut(fill=mean, side_range=(1, 4), p=0.5),
-    v2.RandomIoUCrop(),
+    #v2.RandomZoomOut(fill=mean, side_range=(1, 4), p=0.5),
+    #v2.RandomIoUCrop(),
     #v2.SanitizeBoundingBoxes(),
     v2.RandomResizedCrop(size=(300, 300), antialias=True),
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),
     v2.SanitizeBoundingBoxes(),
-    v2.Normalize([0, 0, 0], [1, 1, 1]),  # this needs to come after ToDtype
+    v2.Normalize(mean, std),  # this needs to come after ToDtype
 ])
 
 validation_transforms = v2.Compose([
@@ -182,7 +182,7 @@ validation_transforms = v2.Compose([
     v2.Resize((300, 300)),
     v2.ClampBoundingBoxes(),
     v2.SanitizeBoundingBoxes(),
-    v2.Normalize([0, 0, 0], [1, 1, 1]),
+    v2.Normalize(mean, std),
 ])
 
 if __name__ == "__main__":
