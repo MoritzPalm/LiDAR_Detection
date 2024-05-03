@@ -86,6 +86,9 @@ class SSDLightning(pl.LightningModule):
     def on_validation_epoch_end(self):
         val_mAP = self.mean_average_precision.compute()["map"]
         self.log("val_mAP", val_mAP, on_epoch=True, prog_bar=True)
+        self.log("val_mAP_50", val_mAP["map_50"])
+        self.log("val_mAP_75", val_mAP["map_75"])
+        self.log_mAPs_per_class(val_mAP["map_per_class"])
         self.true_difficulties.extend([torch.zeros(len(box), dtype=torch.bool,
                                                    device=self.device)
                                        for box in self.true_classes])
@@ -141,7 +144,7 @@ class SSDLightning(pl.LightningModule):
     def on_test_epoch_end(self) -> None:
         test_metrics = self.mean_average_precision_test.compute()
         self.log("test_mAP", test_metrics["map"])
-        self.log("test_mAP_per_class", test_metrics["map_per_class"])
+        self.log_mAPs_per_class(test_metrics["map_per_class"])
         self.log("test_mAP_50", test_metrics["map_50"])
         self.log("test_mAP_75", test_metrics["map_75"])
         self.true_difficulties_test.extend([torch.zeros(len(box), dtype=torch.bool,
@@ -172,3 +175,15 @@ class SSDLightning(pl.LightningModule):
         scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=5, verbose=True)
         return {"optimizer": optimizer, "lr_scheduler": scheduler,
                 "monitor": "train_loss"}
+
+    def log_mAPs_per_class(self, maps_per_class):
+        self.log("test_mAP_car", maps_per_class[0])
+        self.log("test_mAP_truck", maps_per_class[1])
+        self.log("test_mAP_bus", maps_per_class[2])
+        self.log("test_mAP_motorcycle", maps_per_class[3])
+        self.log("test_mAP_bicycle", maps_per_class[4])
+        self.log("test_mAP_scooter", maps_per_class[5])
+        self.log("test_mAP_person", maps_per_class[6])
+        self.log("test_mAP_rider", maps_per_class[7])
+
+
