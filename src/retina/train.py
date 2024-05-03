@@ -36,7 +36,7 @@ def main(args=None):
     parser = parser.parse_args(args)
 
     # initialize wandb
-    wandb.init(project="LiDAR_Object_Detection", name="Retina_finetune_50 SDG")
+    wandb.init(project="LiDAR_Object_Detection", name="Retina_finetune_50 Final Model")
 
     # Create the data loaders
     if parser.dataset == 'coco':
