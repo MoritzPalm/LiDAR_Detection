@@ -106,9 +106,9 @@ def main(args=None):
 
     retinanet.training = True
 
-    # optimizer = optim.Adam(retinanet.parameters(), lr=1e-5)
+    optimizer = optim.Adam(retinanet.parameters(), lr=1e-5)
 
-    optimizer = torch.optim.SGD(retinanet.parameters(), lr=1e-5)
+    # optimizer = torch.optim.SGD(retinanet.parameters(), lr=1e-5)
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
