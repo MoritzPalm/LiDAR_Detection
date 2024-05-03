@@ -84,8 +84,8 @@ class SSDLightning(pl.LightningModule):
         self.mean_average_precision.reset()
 
     def on_validation_epoch_end(self):
-        val_mAP = self.mean_average_precision.compute()["map"]
-        self.log("val_mAP", val_mAP, on_epoch=True, prog_bar=True)
+        val_mAP = self.mean_average_precision.compute()
+        self.log("val_mAP", val_mAP["map"], on_epoch=True, prog_bar=True)
         self.log("val_mAP_50", val_mAP["map_50"])
         self.log("val_mAP_75", val_mAP["map_75"])
         self.log_mAPs_per_class(val_mAP["map_per_class"])
