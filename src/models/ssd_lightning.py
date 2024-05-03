@@ -17,14 +17,6 @@ class SSDLightning(pl.LightningModule):
 
         self.model = SSD300(self.config.num_classes)
         self.loss_fn = MultiBoxLoss(priors_cxcy=self.model.priors_cxcy)
-        self.mean_average_precision = MeanAveragePrecision(box_format="xyxy",
-                                                           iou_type="bbox",
-                                                           class_metrics=False,
-                                                           backend="faster_coco_eval")
-        self.mean_average_precision_test = MeanAveragePrecision(box_format="xyxy",
-                                                                iou_type="bbox",
-                                                                class_metrics=True,
-                                                                backend="pycocotools")
         self.starter, self.ender = torch.cuda.Event(
             enable_timing=True), torch.cuda.Event(enable_timing=True)
         self.det_boxes = []
@@ -77,18 +69,12 @@ class SSDLightning(pl.LightningModule):
 
         targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
-        self.mean_average_precision.update(preds=preds, target=targets)
         return loss
 
     def on_validation_epoch_start(self) -> None:
         self.mean_average_precision.reset()
 
     def on_validation_epoch_end(self):
-        val_mAP = self.mean_average_precision.compute()
-        self.log("val_mAP", val_mAP["map"], on_epoch=True, prog_bar=True)
-        self.log("val_mAP_50", val_mAP["map_50"])
-        self.log("val_mAP_75", val_mAP["map_75"])
-        self.log_mAPs_per_class(val_mAP["map_per_class"])
         self.true_difficulties.extend([torch.zeros(len(box), dtype=torch.bool,
                                                    device=self.device)
                                        for box in self.true_classes])
@@ -138,15 +124,8 @@ class SSDLightning(pl.LightningModule):
 
         targets = [{"boxes": bboxes, "labels": classes}
                    for bboxes, classes in zip(bboxes, classes)]
-        self.mean_average_precision_test.update(preds=preds, target=targets)
-
 
     def on_test_epoch_end(self) -> None:
-        test_metrics = self.mean_average_precision_test.compute()
-        self.log("test_mAP", test_metrics["map"])
-        self.log_mAPs_per_class(test_metrics["map_per_class"])
-        self.log("test_mAP_50", test_metrics["map_50"])
-        self.log("test_mAP_75", test_metrics["map_75"])
         self.true_difficulties_test.extend([torch.zeros(len(box), dtype=torch.bool,
                                                         device=self.device)
                                             for box in self.true_classes_test])
@@ -158,7 +137,8 @@ class SSDLightning(pl.LightningModule):
                                                self.true_classes_test,
                                                self.true_difficulties_test, self.device)
         self.log("custom_map_test", custom_map)
-        self.log("custom_APs_test", custom_APs)
+        for key, value in custom_APs.items():
+            self.log(f"custom_AP_{key}", value)
         self.det_boxes_test.clear()
         self.det_labels_test.clear()
         self.det_scores_test.clear()
@@ -180,10 +160,10 @@ class SSDLightning(pl.LightningModule):
         self.log("test_mAP_car", maps_per_class[0])
         self.log("test_mAP_truck", maps_per_class[1])
         self.log("test_mAP_bus", maps_per_class[2])
-        self.log("test_mAP_motorcycle", maps_per_class[3])
-        self.log("test_mAP_bicycle", maps_per_class[4])
-        self.log("test_mAP_scooter", maps_per_class[5])
-        self.log("test_mAP_person", maps_per_class[6])
-        self.log("test_mAP_rider", maps_per_class[7])
+        #self.log("test_mAP_motorcycle", maps_per_class[3])
+        self.log("test_mAP_bicycle", maps_per_class[3])
+        self.log("test_mAP_scooter", maps_per_class[4])
+        self.log("test_mAP_person", maps_per_class[5])
+        self.log("test_mAP_rider", maps_per_class[6])
 
 
