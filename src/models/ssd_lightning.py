@@ -132,7 +132,9 @@ class SSDLightning(pl.LightningModule):
     def on_test_epoch_end(self) -> None:
         test_metrics = self.mean_average_precision_test.compute()
         self.log("test_mAP", test_metrics["map"])
-        self.log("test_mAP_per_class", test_metrics["ap"]) # TODO: error: no metric ap found
+        self.log("test_mAP_per_class", test_metrics["map_per_class"])
+        self.log("test_mAP_50", test_metrics["map_50"])
+        self.log("test_mAP_75", test_metrics["map_75"])
         self.true_difficulties_test.extend([torch.zeros(len(box), dtype=torch.bool,
                                                         device=self.device)
                                             for box in self.true_classes_test])
