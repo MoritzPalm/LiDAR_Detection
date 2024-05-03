@@ -10,7 +10,7 @@ use_pretrained_weights: True
 
 test_model: True
 checkpoint_path: #../checkpoints
-early_stopping_patience: 10
+early_stopping_patience: 5
 num_workers: 16
 check_val_every_n_epoch: 4
 devices: 1
