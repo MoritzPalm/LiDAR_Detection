@@ -1,3 +1,5 @@
+# code from https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Object-Detection
+
 import torch
 import torch.nn as nn
 
@@ -13,7 +15,8 @@ class MultiBoxLoss(nn.Module):
     (2) a confidence loss for the predicted class scores.
     """
 
-    def __init__(self, priors_cxcy, threshold=0.5, neg_pos_ratio=3, alpha=1., device="cpu"):
+    def __init__(self, priors_cxcy, threshold=0.5,
+                 neg_pos_ratio=3, alpha=1., device="cpu"):
         super(MultiBoxLoss, self).__init__()
         self.device = device
         self.priors_cxcy = priors_cxcy.to(self.device)
@@ -41,7 +44,7 @@ class MultiBoxLoss(nn.Module):
         """
         predicted_locs = predicted_locs.to(self.device)
         predicted_scores = predicted_scores.to(self.device)
-        boxes = [cxcy_to_xy(b).to(self.device) for b in boxes]
+        boxes = [b.to(self.device) for b in boxes]
         labels = [l.to(self.device) for l in labels]
 
         batch_size = predicted_locs.size(0)
